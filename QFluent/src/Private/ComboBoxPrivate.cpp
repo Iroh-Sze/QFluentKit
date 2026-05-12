@@ -72,6 +72,13 @@ void ComboBoxPrivate::createComboMenu()
     }
 
     m_comboMenu = new ComboBoxMenu("menu", q);
+    m_comboMenu->setAttribute(Qt::WA_DeleteOnClose);
+    ComboBoxMenu *menu = m_comboMenu;
+    connect(menu, &QObject::destroyed, q, [this, menu]() {
+        if (m_comboMenu == menu) {
+            m_comboMenu = nullptr;
+        }
+    });
 
     for (int i = 0; i < m_model->rowCount(); ++i) {
         QModelIndex index = m_model->index(i, 0);
