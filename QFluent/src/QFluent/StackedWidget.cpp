@@ -62,8 +62,15 @@ void OpacityAniStackedWidget::removeWidget(QWidget *widget)
         return;
     }
 
+    if (m_nextIndex > index) {
+        --m_nextIndex;
+    } else if (m_nextIndex == index) {
+        m_nextIndex = (count() > 1) ? qMin(index, count() - 2) : 0;
+    }
+
     if (index < m_animations.size()) {
         m_animations[index]->stop();
+        m_animations[index]->setTargetObject(nullptr);
         m_animations[index]->deleteLater();
         m_animations.removeAt(index);
     }
