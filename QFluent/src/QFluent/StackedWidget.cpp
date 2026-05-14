@@ -13,6 +13,7 @@
 #include <QPauseAnimation>
 #include <QTimer>
 #include <QCoreApplication>
+#include <QPointer>
 
 // 辅助函数：创建自定义贝塞尔曲线
 static QEasingCurve createBezierCurve(qreal c1x, qreal c1y, qreal c2x, qreal c2y)
@@ -52,6 +53,40 @@ void OpacityAniStackedWidget::addWidget(QWidget *widget)
 
     m_effects.append(effect);
     m_animations.append(animation);
+}
+
+void OpacityAniStackedWidget::removeWidget(QWidget *widget)
+{
+    int index = indexOf(widget);
+    if (index == -1) {
+        return;
+    }
+
+    if (m_nextIndex > index) {
+        --m_nextIndex;
+    } else if (m_nextIndex == index) {
+        m_nextIndex = (count() > 1) ? qMin(index, count() - 2) : 0;
+    }
+
+    if (index < m_animations.size()) {
+        m_animations[index]->stop();
+        m_animations[index]->setTargetObject(nullptr);
+        m_animations[index]->deleteLater();
+        m_animations.removeAt(index);
+    }
+
+    if (index < m_effects.size()) {
+        widget->setGraphicsEffect(nullptr);
+        m_effects.removeAt(index);
+    }
+
+    QStackedWidget::removeWidget(widget);
+
+    if (count() == 0) {
+        m_nextIndex = 0;
+    } else if (m_nextIndex >= count()) {
+        m_nextIndex = count() - 1;
+    }
 }
 
 void OpacityAniStackedWidget::setCurrentIndex(int index)
@@ -723,6 +758,12 @@ void StackedWidget::removeWidget(QWidget *widget)
 
     // 根据类型调用相应的方法
     switch (m_animationType) {
+    case AnimationType::Opacity: {
+        auto* view = qobject_cast<OpacityAniStackedWidget*>(m_view);
+        if (view) view->removeWidget(widget);
+        break;
+    }
+
     case AnimationType::PopUp: {
         auto* view = qobject_cast<PopUpAniStackedWidget*>(m_view);
         if (view) view->removeWidget(widget);
@@ -754,9 +795,7 @@ void StackedWidget::setCurrentWidget(QWidget *widget, bool popOut,
         auto* view = qobject_cast<OpacityAniStackedWidget*>(m_view);
         if (view) view->setCurrentWidget(widget);
         // 延迟重置滚动条,在切换完成后执行
-        QTimer::singleShot(0, this, [this, widget]() {
-            resetScrollBars(widget);
-        });
+        scheduleScrollBarReset(widget);
         break;
     }
 
@@ -773,9 +812,7 @@ void StackedWidget::setCurrentWidget(QWidget *widget, bool popOut,
         }
 
         // 延迟重置滚动条,在切换完成后执行
-        QTimer::singleShot(0, this, [this, widget]() {
-            resetScrollBars(widget);
-        });
+        scheduleScrollBarReset(widget);
         break;
     }
 
@@ -786,9 +823,7 @@ void StackedWidget::setCurrentWidget(QWidget *widget, bool popOut,
         transitionView->setCurrentWidget(widget, duration, isBack);
 
         // 延迟重置滚动条,在切换完成后执行
-        QTimer::singleShot(0, this, [this, widget]() {
-            resetScrollBars(widget);
-        });
+        scheduleScrollBarReset(widget);
         break;
     }
     }
@@ -904,4 +939,15 @@ void StackedWidget::resetScrollBars(QWidget *widget)
             hbar->setValue(0);
         }
     }
+}
+
+void StackedWidget::scheduleScrollBarReset(QWidget *widget)
+{
+    QPointer<QWidget> guardedWidget(widget);
+    QTimer::singleShot(0, this, [this, guardedWidget]() {
+        if (!guardedWidget) {
+            return;
+        }
+        resetScrollBars(guardedWidget.data());
+    });
 }

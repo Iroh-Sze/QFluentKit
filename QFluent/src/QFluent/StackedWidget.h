@@ -30,6 +30,7 @@ public:
     ~OpacityAniStackedWidget() override = default;
 
     void addWidget(QWidget *widget);
+    void removeWidget(QWidget *widget);
     void setCurrentIndex(int index);
     void setCurrentWidget(QWidget *widget);
 
@@ -332,6 +333,7 @@ private:
      * @brief 重置滚动条到顶部
      */
     void resetScrollBars(QWidget *widget);
+    void scheduleScrollBarReset(QWidget *widget);
 
     QHBoxLayout *m_hBoxLayout;              // 水平布局
     QStackedWidget *m_view;                 // 实际的堆叠控件
