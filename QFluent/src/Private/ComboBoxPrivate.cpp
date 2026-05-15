@@ -23,24 +23,24 @@ void ComboBoxPrivate::setModel(QAbstractItemModel *model)
 {
     Q_Q(ComboBox);
 
-    if (model == m_model)
+    if (model == m_model.data())
         return;
 
     if (!model) {
         model = m_internalModel;
     }
 
-    disconnectModel(m_model);
+    disconnectModel(m_model.data());
     m_model = model;
     connectModel(m_model);
 
     m_comboMenu = nullptr;
 
-    int oldIndex = m_currentIndex;
+    const bool hadSelection = m_currentIndex != -1;
     m_currentIndex = -1;
-    q->setCurrentIndex(-1);
+    updateTextState();
 
-    if (oldIndex != -1) {
+    if (hadSelection) {
         emit q->currentIndexChanged(-1);
         emit q->currentTextChanged(QString());
     }
@@ -52,14 +52,23 @@ void ComboBoxPrivate::connectModel(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::rowsRemoved, this, &ComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &ComboBoxPrivate::onModelReset);
     connect(model, &QAbstractItemModel::dataChanged, this, &ComboBoxPrivate::onDataChanged);
+    if (model != m_internalModel) {
+        connect(model, &QObject::destroyed, this, &ComboBoxPrivate::onModelDestroyed);
+    }
 }
 
 void ComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
 {
+    if (!model)
+        return;
+
     disconnect(model, &QAbstractItemModel::rowsInserted, this, &ComboBoxPrivate::onRowsInserted);
     disconnect(model, &QAbstractItemModel::rowsRemoved, this, &ComboBoxPrivate::onRowsRemoved);
     disconnect(model, &QAbstractItemModel::modelReset, this, &ComboBoxPrivate::onModelReset);
     disconnect(model, &QAbstractItemModel::dataChanged, this, &ComboBoxPrivate::onDataChanged);
+    if (model != m_internalModel) {
+        disconnect(model, &QObject::destroyed, this, &ComboBoxPrivate::onModelDestroyed);
+    }
 }
 
 void ComboBoxPrivate::createComboMenu()
@@ -213,6 +222,28 @@ void ComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelInde
         updateTextState();
         QModelIndex index = m_model->index(m_currentIndex, 0);
         emit q->currentTextChanged(m_model->data(index, Qt::DisplayRole).toString());
+    }
+}
+
+void ComboBoxPrivate::onModelDestroyed(QObject *model)
+{
+    Q_Q(ComboBox);
+
+    if (model == m_internalModel) {
+        return;
+    }
+
+    closeComboMenu();
+    m_model = m_internalModel;
+    connectModel(m_internalModel);
+
+    const bool hadSelection = m_currentIndex != -1;
+    m_currentIndex = -1;
+    updateTextState();
+
+    if (hadSelection) {
+        emit q->currentIndexChanged(-1);
+        emit q->currentTextChanged(QString());
     }
 }
 
