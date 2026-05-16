@@ -185,6 +185,7 @@ void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int firs
         if (idx >= first && idx <= last) {
             changed = true;
         } else if (idx > last) {
+            changed = true;
             newSelected << idx - count;
         } else {
             newSelected << idx;
