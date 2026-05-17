@@ -47,6 +47,7 @@ private slots:
     void onRowsInserted(const QModelIndex &parent, int first, int last);
     void onRowsRemoved(const QModelIndex &parent, int first, int last);
     void onModelReset();
+    void onModelDestroyed(QObject *model);
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
     void onMenuAction(int index, bool checked);
 
