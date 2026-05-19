@@ -31,15 +31,15 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
         model = m_internalModel;
     }
 
+    int oldIndex = m_currentIndex;
+
+    closeComboMenu();
     disconnectModel(m_model);
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
-
-    int oldIndex = m_currentIndex;
     m_currentIndex = -1;
-    q->setCurrentIndex(-1);
+    updateTextState();
 
     if (oldIndex != -1) {
         emit q->currentIndexChanged(-1);
