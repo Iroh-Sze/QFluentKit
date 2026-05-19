@@ -34,11 +34,11 @@ void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
         model = m_internalModel;
     }
 
+    closeComboMenu();
     disconnectModel(m_model);
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
     m_selectedIndexes.clear();
 
     updateTextState();
