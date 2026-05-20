@@ -35,7 +35,7 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
+    closeComboMenu();
 
     int oldIndex = m_currentIndex;
     m_currentIndex = -1;
@@ -137,7 +137,7 @@ void EditableComboBoxPrivate::closeComboMenu()
 
 void EditableComboBoxPrivate::toggleComboMenu()
 {
-    if (m_comboMenu != nullptr) {
+    if (m_comboMenu && m_comboMenu->isVisible()) {
         closeComboMenu();
     } else {
         showComboMenu();
