@@ -51,6 +51,7 @@ void MultiViewComboBoxPrivate::connectModel(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::rowsInserted, this, &MultiViewComboBoxPrivate::onRowsInserted);
     connect(model, &QAbstractItemModel::rowsRemoved, this, &MultiViewComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &MultiViewComboBoxPrivate::onModelReset);
+    connect(model, &QObject::destroyed, this, &MultiViewComboBoxPrivate::onModelDestroyed);
     connect(model, &QAbstractItemModel::dataChanged, this, &MultiViewComboBoxPrivate::onDataChanged);
 }
 
@@ -59,6 +60,7 @@ void MultiViewComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
     disconnect(model, &QAbstractItemModel::rowsInserted, this, &MultiViewComboBoxPrivate::onRowsInserted);
     disconnect(model, &QAbstractItemModel::rowsRemoved, this, &MultiViewComboBoxPrivate::onRowsRemoved);
     disconnect(model, &QAbstractItemModel::modelReset, this, &MultiViewComboBoxPrivate::onModelReset);
+    disconnect(model, &QObject::destroyed, this, &MultiViewComboBoxPrivate::onModelDestroyed);
     disconnect(model, &QAbstractItemModel::dataChanged, this, &MultiViewComboBoxPrivate::onDataChanged);
 }
 
@@ -206,6 +208,28 @@ void MultiViewComboBoxPrivate::onModelReset()
     emit q->currentIndexChanged(-1);
     emit q->currentTextChanged(QString());
     emit q->selectionChanged();
+}
+
+void MultiViewComboBoxPrivate::onModelDestroyed(QObject *model)
+{
+    Q_Q(MultiViewComboBox);
+
+    if (model != m_model || model == m_internalModel)
+        return;
+
+    closeComboMenu();
+    m_model = m_internalModel;
+    connectModel(m_model);
+
+    bool hadSelection = !m_selectedIndexes.isEmpty();
+    m_selectedIndexes.clear();
+    updateTextState();
+
+    emit q->currentIndexChanged(-1);
+    emit q->currentTextChanged(QString());
+    if (hadSelection) {
+        emit q->selectionChanged();
+    }
 }
 
 void MultiViewComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
