@@ -27,39 +27,46 @@ void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
 {
     Q_Q(MultiViewComboBox);
 
-    if (model == m_model)
-        return;
-
     if (!model) {
         model = m_internalModel;
     }
+
+    if (model == m_model)
+        return;
 
     disconnectModel(m_model);
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
+    closeComboMenu();
+    const bool hadSelection = !m_selectedIndexes.isEmpty();
     m_selectedIndexes.clear();
 
     updateTextState();
     emit q->currentIndexChanged(-1);
     emit q->currentTextChanged(QString());
+    if (hadSelection)
+        emit q->selectionChanged();
 }
 
 void MultiViewComboBoxPrivate::connectModel(QAbstractItemModel *model)
 {
+    if (!model)
+        return;
+
     connect(model, &QAbstractItemModel::rowsInserted, this, &MultiViewComboBoxPrivate::onRowsInserted);
     connect(model, &QAbstractItemModel::rowsRemoved, this, &MultiViewComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &MultiViewComboBoxPrivate::onModelReset);
     connect(model, &QAbstractItemModel::dataChanged, this, &MultiViewComboBoxPrivate::onDataChanged);
+    connect(model, &QObject::destroyed, this, &MultiViewComboBoxPrivate::onModelDestroyed);
 }
 
 void MultiViewComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
 {
-    disconnect(model, &QAbstractItemModel::rowsInserted, this, &MultiViewComboBoxPrivate::onRowsInserted);
-    disconnect(model, &QAbstractItemModel::rowsRemoved, this, &MultiViewComboBoxPrivate::onRowsRemoved);
-    disconnect(model, &QAbstractItemModel::modelReset, this, &MultiViewComboBoxPrivate::onModelReset);
-    disconnect(model, &QAbstractItemModel::dataChanged, this, &MultiViewComboBoxPrivate::onDataChanged);
+    if (!model)
+        return;
+
+    disconnect(model, nullptr, this, nullptr);
 }
 
 void MultiViewComboBoxPrivate::createComboMenu()
@@ -165,12 +172,17 @@ void MultiViewComboBoxPrivate::onRowsInserted(const QModelIndex &parent, int fir
     Q_Q(MultiViewComboBox);
 
     int count = last - first + 1;
+    bool changed = false;
     for (int i = 0; i < m_selectedIndexes.size(); ++i) {
         if (m_selectedIndexes[i] >= first) {
             m_selectedIndexes[i] += count;
+            changed = true;
         }
     }
-    updateTextState();
+    if (changed) {
+        updateTextState();
+        emit q->selectionChanged();
+    }
 }
 
 void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int first, int last)
@@ -179,18 +191,17 @@ void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int firs
     Q_Q(MultiViewComboBox);
 
     int count = last - first + 1;
-    bool changed = false;
     QList<int> newSelected;
     for (int idx : m_selectedIndexes) {
         if (idx >= first && idx <= last) {
-            changed = true;
+            continue;
         } else if (idx > last) {
             newSelected << idx - count;
         } else {
             newSelected << idx;
         }
     }
-    if (changed) {
+    if (newSelected != m_selectedIndexes) {
         m_selectedIndexes = newSelected;
         updateTextState();
         emit q->selectionChanged();
@@ -206,6 +217,22 @@ void MultiViewComboBoxPrivate::onModelReset()
     emit q->currentIndexChanged(-1);
     emit q->currentTextChanged(QString());
     emit q->selectionChanged();
+}
+
+void MultiViewComboBoxPrivate::onModelDestroyed()
+{
+    Q_Q(MultiViewComboBox);
+
+    closeComboMenu();
+    const bool hadSelection = !m_selectedIndexes.isEmpty();
+    m_model = m_internalModel;
+    connectModel(m_model);
+    m_selectedIndexes.clear();
+    updateTextState();
+    emit q->currentIndexChanged(-1);
+    emit q->currentTextChanged(QString());
+    if (hadSelection)
+        emit q->selectionChanged();
 }
 
 void MultiViewComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
@@ -232,9 +259,11 @@ void MultiViewComboBoxPrivate::onMenuAction(int index, bool checked)
     if (checked) {
         if (m_maxSelectedCount > 0 && m_selectedIndexes.size() >= m_maxSelectedCount) {
             if (m_comboMenu) {
-                QList<QAction *> actions = m_comboMenu->actions();
-                if (index < actions.size()) {
-                    actions[index]->setChecked(false);
+                for (QAction *action : m_comboMenu->menuActions()) {
+                    if (action->data().toInt() == index) {
+                        action->setChecked(false);
+                        break;
+                    }
                 }
             }
             return;
