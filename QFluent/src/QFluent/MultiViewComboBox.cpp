@@ -111,9 +111,15 @@ void MultiViewComboBox::removeItem(int index)
 void MultiViewComboBox::clear()
 {
     Q_D(MultiViewComboBox);
+    const bool hadSelection = !d->m_selectedIndexes.isEmpty();
     d->m_model->removeRows(0, d->m_model->rowCount());
-    d->m_selectedIndexes.clear();
-    d->updateTextState();
+
+    if (!d->m_selectedIndexes.isEmpty()) {
+        d->m_selectedIndexes.clear();
+        d->updateTextState();
+        if (hadSelection)
+            emit selectionChanged();
+    }
 }
 
 int MultiViewComboBox::count() const

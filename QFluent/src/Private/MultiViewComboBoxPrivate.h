@@ -5,6 +5,7 @@
 #include <QVariant>
 #include <QList>
 #include <QAbstractItemModel>
+#include <QPointer>
 
 #include "ComboItemModel.h"
 #include "ComboBoxHelper.h"
@@ -31,7 +32,7 @@ public:
     void connectModel(QAbstractItemModel *model);
     void disconnectModel(QAbstractItemModel *model);
 
-    QAbstractItemModel *m_model;
+    QPointer<QAbstractItemModel> m_model;
     ComboItemModel *m_internalModel;
     MultiViewComboBoxMenu *m_comboMenu = nullptr;
     TranslateYAnimation *m_arrowAni = nullptr;
@@ -47,6 +48,7 @@ private slots:
     void onRowsInserted(const QModelIndex &parent, int first, int last);
     void onRowsRemoved(const QModelIndex &parent, int first, int last);
     void onModelReset();
+    void onModelDestroyed();
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
     void onMenuAction(int index, bool checked);
 
