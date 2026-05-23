@@ -31,36 +31,36 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
         model = m_internalModel;
     }
 
+    closeComboMenu();
     disconnectModel(m_model);
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
-
-    int oldIndex = m_currentIndex;
-    m_currentIndex = -1;
     q->setCurrentIndex(-1);
-
-    if (oldIndex != -1) {
-        emit q->currentIndexChanged(-1);
-        emit q->currentTextChanged(QString());
-    }
 }
 
 void EditableComboBoxPrivate::connectModel(QAbstractItemModel *model)
 {
+    if (!model)
+        return;
+
     connect(model, &QAbstractItemModel::rowsInserted, this, &EditableComboBoxPrivate::onRowsInserted);
     connect(model, &QAbstractItemModel::rowsRemoved, this, &EditableComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &EditableComboBoxPrivate::onModelReset);
     connect(model, &QAbstractItemModel::dataChanged, this, &EditableComboBoxPrivate::onDataChanged);
+    connect(model, &QObject::destroyed, this, &EditableComboBoxPrivate::onModelDestroyed);
 }
 
 void EditableComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
 {
+    if (!model)
+        return;
+
     disconnect(model, &QAbstractItemModel::rowsInserted, this, &EditableComboBoxPrivate::onRowsInserted);
     disconnect(model, &QAbstractItemModel::rowsRemoved, this, &EditableComboBoxPrivate::onRowsRemoved);
     disconnect(model, &QAbstractItemModel::modelReset, this, &EditableComboBoxPrivate::onModelReset);
     disconnect(model, &QAbstractItemModel::dataChanged, this, &EditableComboBoxPrivate::onDataChanged);
+    disconnect(model, &QObject::destroyed, this, &EditableComboBoxPrivate::onModelDestroyed);
 }
 
 void EditableComboBoxPrivate::createComboMenu()
@@ -215,6 +215,20 @@ void EditableComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QM
         QModelIndex index = m_model->index(m_currentIndex, 0);
         emit q->currentTextChanged(m_model->data(index, Qt::DisplayRole).toString());
     }
+}
+
+void EditableComboBoxPrivate::onModelDestroyed(QObject *object)
+{
+    Q_Q(EditableComboBox);
+
+    if (object != m_model || object == m_internalModel) {
+        return;
+    }
+
+    closeComboMenu();
+    m_model = m_internalModel;
+    connectModel(m_model);
+    q->setCurrentIndex(-1);
 }
 
 void EditableComboBoxPrivate::onMenuAction(int index)
