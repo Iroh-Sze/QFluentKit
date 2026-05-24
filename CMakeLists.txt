@@ -14,6 +14,12 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 add_subdirectory(QFluent)
 add_subdirectory(QFluentExample)
 
+option(QFLUENT_BUILD_TESTS "Build QFluent tests" OFF)
+if(QFLUENT_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
 # find_package(QFluent QUIET)
 # if(QFluent_FOUND)
 #     add_subdirectory(MinimalExample)
