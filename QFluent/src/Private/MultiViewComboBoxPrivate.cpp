@@ -179,20 +179,24 @@ void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int firs
     Q_Q(MultiViewComboBox);
 
     int count = last - first + 1;
-    bool changed = false;
+    bool removedSelectedItem = false;
     QList<int> newSelected;
     for (int idx : m_selectedIndexes) {
         if (idx >= first && idx <= last) {
-            changed = true;
+            removedSelectedItem = true;
         } else if (idx > last) {
             newSelected << idx - count;
         } else {
             newSelected << idx;
         }
     }
-    if (changed) {
+
+    if (newSelected != m_selectedIndexes) {
         m_selectedIndexes = newSelected;
         updateTextState();
+    }
+
+    if (removedSelectedItem) {
         emit q->selectionChanged();
     }
 }
