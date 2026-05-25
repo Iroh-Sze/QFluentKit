@@ -53,6 +53,9 @@ void EditableComboBoxPrivate::connectModel(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::rowsRemoved, this, &EditableComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &EditableComboBoxPrivate::onModelReset);
     connect(model, &QAbstractItemModel::dataChanged, this, &EditableComboBoxPrivate::onDataChanged);
+    if (model != m_internalModel) {
+        connect(model, &QObject::destroyed, this, &EditableComboBoxPrivate::onModelDestroyed);
+    }
 }
 
 void EditableComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
@@ -61,6 +64,7 @@ void EditableComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
     disconnect(model, &QAbstractItemModel::rowsRemoved, this, &EditableComboBoxPrivate::onRowsRemoved);
     disconnect(model, &QAbstractItemModel::modelReset, this, &EditableComboBoxPrivate::onModelReset);
     disconnect(model, &QAbstractItemModel::dataChanged, this, &EditableComboBoxPrivate::onDataChanged);
+    disconnect(model, &QObject::destroyed, this, &EditableComboBoxPrivate::onModelDestroyed);
 }
 
 void EditableComboBoxPrivate::createComboMenu()
@@ -204,6 +208,27 @@ void EditableComboBoxPrivate::onModelReset()
     updateTextState();
     emit q->currentIndexChanged(-1);
     emit q->currentTextChanged(QString());
+}
+
+void EditableComboBoxPrivate::onModelDestroyed(QObject *object)
+{
+    Q_Q(EditableComboBox);
+
+    if (object != m_model)
+        return;
+
+    int oldIndex = m_currentIndex;
+    m_model = m_internalModel;
+    connectModel(m_model);
+    closeComboMenu();
+
+    m_currentIndex = -1;
+    updateTextState();
+
+    if (oldIndex != -1) {
+        emit q->currentIndexChanged(-1);
+        emit q->currentTextChanged(QString());
+    }
 }
 
 void EditableComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
