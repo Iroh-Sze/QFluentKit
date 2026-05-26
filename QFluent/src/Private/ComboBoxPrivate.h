@@ -32,6 +32,7 @@ public:
     void setModel(QAbstractItemModel *model);
     void connectModel(QAbstractItemModel *model);
     void disconnectModel(QAbstractItemModel *model);
+    void resetModelToInternal();
 
     QAbstractItemModel *m_model;
     ComboItemModel *m_internalModel;
@@ -52,6 +53,7 @@ private slots:
     void onModelReset();
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
     void onMenuAction(int index);
+    void onModelDestroyed(QObject *object);
 
 private:
     ComboBox *q_ptr;
