@@ -7,7 +7,6 @@
 #include <QAbstractItemModel>
 #include <QAction>
 #include <QPointer>
-#include <QCursor>
 
 EditableComboBoxPrivate::EditableComboBoxPrivate(EditableComboBox *q)
     : QObject(q)
@@ -24,22 +23,21 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
 {
     Q_Q(EditableComboBox);
 
-    if (model == m_model)
-        return;
-
     if (!model) {
         model = m_internalModel;
     }
 
+    if (model == m_model)
+        return;
+
+    closeComboMenu();
     disconnectModel(m_model);
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
-
     int oldIndex = m_currentIndex;
     m_currentIndex = -1;
-    q->setCurrentIndex(-1);
+    updateTextState();
 
     if (oldIndex != -1) {
         emit q->currentIndexChanged(-1);
@@ -49,18 +47,42 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
 
 void EditableComboBoxPrivate::connectModel(QAbstractItemModel *model)
 {
+    if (!model)
+        return;
+
     connect(model, &QAbstractItemModel::rowsInserted, this, &EditableComboBoxPrivate::onRowsInserted);
     connect(model, &QAbstractItemModel::rowsRemoved, this, &EditableComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &EditableComboBoxPrivate::onModelReset);
     connect(model, &QAbstractItemModel::dataChanged, this, &EditableComboBoxPrivate::onDataChanged);
+    if (model != m_internalModel) {
+        connect(model, &QObject::destroyed, this, &EditableComboBoxPrivate::onModelDestroyed);
+    }
 }
 
 void EditableComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
 {
-    disconnect(model, &QAbstractItemModel::rowsInserted, this, &EditableComboBoxPrivate::onRowsInserted);
-    disconnect(model, &QAbstractItemModel::rowsRemoved, this, &EditableComboBoxPrivate::onRowsRemoved);
-    disconnect(model, &QAbstractItemModel::modelReset, this, &EditableComboBoxPrivate::onModelReset);
-    disconnect(model, &QAbstractItemModel::dataChanged, this, &EditableComboBoxPrivate::onDataChanged);
+    if (!model)
+        return;
+
+    disconnect(model, nullptr, this, nullptr);
+}
+
+void EditableComboBoxPrivate::resetModelToInternal()
+{
+    Q_Q(EditableComboBox);
+
+    closeComboMenu();
+    m_model = m_internalModel;
+    connectModel(m_model);
+
+    int oldIndex = m_currentIndex;
+    m_currentIndex = -1;
+    updateTextState();
+
+    if (oldIndex != -1) {
+        emit q->currentIndexChanged(-1);
+        emit q->currentTextChanged(QString());
+    }
 }
 
 void EditableComboBoxPrivate::createComboMenu()
@@ -68,11 +90,11 @@ void EditableComboBoxPrivate::createComboMenu()
     Q_Q(EditableComboBox);
 
     if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
+        closeComboMenu();
     }
 
     m_comboMenu = new ComboBoxMenu("menu", q);
+    ComboBoxMenu *menu = m_comboMenu;
 
     for (int i = 0; i < m_model->rowCount(); ++i) {
         QModelIndex index = m_model->index(i, 0);
@@ -95,12 +117,12 @@ void EditableComboBoxPrivate::createComboMenu()
     }
 
     QPointer<EditableComboBox> qPtr = q;
-    connect(m_comboMenu, &ComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(menu, &ComboBoxMenu::closed, q, [qPtr, this, menu]() {
         if (!qPtr) return;
-        QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
-        if (!qPtr->rect().contains(pos)) {
+        if (m_comboMenu == menu) {
             m_comboMenu = nullptr;
         }
+        menu->deleteLater();
     });
 }
 
@@ -131,8 +153,10 @@ void EditableComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    ComboBoxMenu *menu = m_comboMenu;
     m_comboMenu = nullptr;
+    menu->close();
+    menu->deleteLater();
 }
 
 void EditableComboBoxPrivate::toggleComboMenu()
@@ -166,6 +190,8 @@ void EditableComboBoxPrivate::onRowsInserted(const QModelIndex &parent, int firs
     Q_UNUSED(parent);
     Q_Q(EditableComboBox);
 
+    closeComboMenu();
+
     if (m_currentIndex < 0)
         return;
 
@@ -180,6 +206,8 @@ void EditableComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int first
 {
     Q_UNUSED(parent);
     Q_Q(EditableComboBox);
+
+    closeComboMenu();
 
     if (m_currentIndex < 0)
         return;
@@ -200,6 +228,7 @@ void EditableComboBoxPrivate::onModelReset()
 {
     Q_Q(EditableComboBox);
 
+    closeComboMenu();
     m_currentIndex = -1;
     updateTextState();
     emit q->currentIndexChanged(-1);
@@ -209,6 +238,8 @@ void EditableComboBoxPrivate::onModelReset()
 void EditableComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
 {
     Q_Q(EditableComboBox);
+
+    closeComboMenu();
 
     if (m_currentIndex >= topLeft.row() && m_currentIndex <= bottomRight.row()) {
         updateTextState();
@@ -279,4 +310,12 @@ void EditableComboBoxPrivate::onActivated(const QString &text)
             return;
         }
     }
+}
+
+void EditableComboBoxPrivate::onModelDestroyed(QObject *object)
+{
+    if (object != m_model)
+        return;
+
+    resetModelToInternal();
 }
