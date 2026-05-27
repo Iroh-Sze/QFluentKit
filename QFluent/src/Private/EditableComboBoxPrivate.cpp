@@ -35,11 +35,10 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
-
     int oldIndex = m_currentIndex;
+    closeComboMenu();
     m_currentIndex = -1;
-    q->setCurrentIndex(-1);
+    updateTextState();
 
     if (oldIndex != -1) {
         emit q->currentIndexChanged(-1);
@@ -68,8 +67,7 @@ void EditableComboBoxPrivate::createComboMenu()
     Q_Q(EditableComboBox);
 
     if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
+        closeComboMenu();
     }
 
     m_comboMenu = new ComboBoxMenu("menu", q);
@@ -95,11 +93,14 @@ void EditableComboBoxPrivate::createComboMenu()
     }
 
     QPointer<EditableComboBox> qPtr = q;
-    connect(m_comboMenu, &ComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(m_comboMenu, &ComboBoxMenu::closed, q, [qPtr, this, menu = m_comboMenu]() {
         if (!qPtr) return;
         QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
         if (!qPtr->rect().contains(pos)) {
-            m_comboMenu = nullptr;
+            if (m_comboMenu == menu) {
+                m_comboMenu = nullptr;
+            }
+            menu->deleteLater();
         }
     });
 }
@@ -131,8 +132,10 @@ void EditableComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    ComboBoxMenu *menu = m_comboMenu;
     m_comboMenu = nullptr;
+    menu->close();
+    menu->deleteLater();
 }
 
 void EditableComboBoxPrivate::toggleComboMenu()

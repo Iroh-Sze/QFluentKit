@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QAbstractItemModel>
+#include <QAction>
 
 MultiViewComboBox::MultiViewComboBox(QWidget *parent)
     : QPushButton(parent)
@@ -165,6 +166,10 @@ void MultiViewComboBox::setItemSelected(int index, bool selected)
     if (index < 0 || index >= d->m_model->rowCount())
         return;
 
+    QModelIndex modelIndex = d->m_model->index(index, 0);
+    if (d->m_model->data(modelIndex, ComboItemModel::SeparatorRole).toBool())
+        return;
+
     if (selected) {
         if (d->m_maxSelectedCount > 0 && d->m_selectedIndexes.size() >= d->m_maxSelectedCount)
             return;
@@ -223,7 +228,26 @@ QList<QVariant> MultiViewComboBox::selectedDatas() const
 void MultiViewComboBox::setMaxSelectedCount(int count)
 {
     Q_D(MultiViewComboBox);
+    if (d->m_maxSelectedCount == count)
+        return;
+
     d->m_maxSelectedCount = count;
+
+    if (count <= 0 || d->m_selectedIndexes.size() <= count)
+        return;
+
+    while (d->m_selectedIndexes.size() > count) {
+        int index = d->m_selectedIndexes.takeLast();
+        emit itemDeselected(index);
+    }
+
+    d->updateTextState();
+    if (d->m_comboMenu) {
+        for (QAction *action : d->m_comboMenu->menuActions()) {
+            action->setChecked(d->m_selectedIndexes.contains(action->data().toInt()));
+        }
+    }
+    emit selectionChanged();
 }
 
 int MultiViewComboBox::maxSelectedCount() const

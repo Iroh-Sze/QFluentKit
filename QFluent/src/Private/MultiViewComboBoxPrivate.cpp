@@ -38,7 +38,7 @@ void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
+    closeComboMenu();
     m_selectedIndexes.clear();
 
     updateTextState();
@@ -67,8 +67,7 @@ void MultiViewComboBoxPrivate::createComboMenu()
     Q_Q(MultiViewComboBox);
 
     if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
+        closeComboMenu();
     }
 
     m_comboMenu = new MultiViewComboBoxMenu("menu", q);
@@ -98,11 +97,14 @@ void MultiViewComboBoxPrivate::createComboMenu()
     }
 
     QPointer<MultiViewComboBox> qPtr = q;
-    connect(m_comboMenu, &MultiViewComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(m_comboMenu, &MultiViewComboBoxMenu::closed, q, [qPtr, this, menu = m_comboMenu]() {
         if (!qPtr) return;
         QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
         if (!qPtr->rect().contains(pos)) {
-            m_comboMenu = nullptr;
+            if (m_comboMenu == menu) {
+                m_comboMenu = nullptr;
+            }
+            menu->deleteLater();
         }
     });
 }
@@ -124,8 +126,10 @@ void MultiViewComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    MultiViewComboBoxMenu *menu = m_comboMenu;
     m_comboMenu = nullptr;
+    menu->close();
+    menu->deleteLater();
 }
 
 void MultiViewComboBoxPrivate::toggleComboMenu()
@@ -232,9 +236,11 @@ void MultiViewComboBoxPrivate::onMenuAction(int index, bool checked)
     if (checked) {
         if (m_maxSelectedCount > 0 && m_selectedIndexes.size() >= m_maxSelectedCount) {
             if (m_comboMenu) {
-                QList<QAction *> actions = m_comboMenu->actions();
-                if (index < actions.size()) {
-                    actions[index]->setChecked(false);
+                for (QAction *action : m_comboMenu->menuActions()) {
+                    if (action->data().toInt() == index) {
+                        action->setChecked(false);
+                        break;
+                    }
                 }
             }
             return;
