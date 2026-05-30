@@ -36,13 +36,10 @@ void ComboBoxPrivate::setModel(QAbstractItemModel *model)
 
     m_comboMenu = nullptr;
 
-    int oldIndex = m_currentIndex;
-    m_currentIndex = -1;
-    q->setCurrentIndex(-1);
-
-    if (oldIndex != -1) {
-        emit q->currentIndexChanged(-1);
-        emit q->currentTextChanged(QString());
+    if (m_currentIndex != -1) {
+        q->setCurrentIndex(-1);
+    } else {
+        updateTextState();
     }
 }
 

@@ -29,12 +29,15 @@ const QHash<QString, QString>& StyleSheet::themeColorMap() {
 
     // 检查缓存是否需要更新
     static QColor s_cachedPrimaryColor;
+    static bool s_cachedIsDark = false;
     static int s_localVersion = -1;  // 初始化为 -1，确保第一次必定更新
 
     const QColor currentPrimaryColor = Theme::themeColor(Fluent::ThemeColor::PRIMARY);
+    const bool currentIsDark = Theme::isDark();
 
-    // 如果主题色改变或版本号变化，更新缓存
-    if (s_colorMap.isEmpty() || s_cachedPrimaryColor != currentPrimaryColor || s_localVersion != s_cacheVersion) {
+    // 如果主题色、明暗模式或版本号变化，更新缓存
+    if (s_colorMap.isEmpty() || s_cachedPrimaryColor != currentPrimaryColor ||
+            s_cachedIsDark != currentIsDark || s_localVersion != s_cacheVersion) {
         s_colorMap.clear();
         s_colorMap.reserve(7);
 
@@ -47,6 +50,7 @@ const QHash<QString, QString>& StyleSheet::themeColorMap() {
         s_colorMap.insert("--ThemeColorLight3", Theme::themeColor(Fluent::ThemeColor::LIGHT_3).name());
 
         s_cachedPrimaryColor = currentPrimaryColor;
+        s_cachedIsDark = currentIsDark;
         s_localVersion = s_cacheVersion;
     }
 
@@ -560,9 +564,11 @@ StyleSheetManager::StyleSheetManager() : QObject() {
 
     // 监听 Theme 信号，自行更新样式表（消除 Theme 主动调用 StyleSheetManager 的双向依赖）
     Theme::onThemeModeChanged(this, [this](Fluent::ThemeMode) {
+        StyleSheet::clearThemeColorCache();
         updateStyleSheet(false);
     });
     Theme::onThemeColorChanged(this, [this](const QColor&) {
+        StyleSheet::clearThemeColorCache();
         updateStyleSheet(false);
     });
 }

@@ -39,11 +39,15 @@ void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
     connectModel(m_model);
 
     m_comboMenu = nullptr;
+    const bool hadSelection = !m_selectedIndexes.isEmpty();
     m_selectedIndexes.clear();
 
     updateTextState();
     emit q->currentIndexChanged(-1);
     emit q->currentTextChanged(QString());
+    if (hadSelection) {
+        emit q->selectionChanged();
+    }
 }
 
 void MultiViewComboBoxPrivate::connectModel(QAbstractItemModel *model)
@@ -179,18 +183,15 @@ void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int firs
     Q_Q(MultiViewComboBox);
 
     int count = last - first + 1;
-    bool changed = false;
     QList<int> newSelected;
     for (int idx : m_selectedIndexes) {
-        if (idx >= first && idx <= last) {
-            changed = true;
-        } else if (idx > last) {
+        if (idx > last) {
             newSelected << idx - count;
-        } else {
+        } else if (idx < first) {
             newSelected << idx;
         }
     }
-    if (changed) {
+    if (newSelected != m_selectedIndexes) {
         m_selectedIndexes = newSelected;
         updateTextState();
         emit q->selectionChanged();
