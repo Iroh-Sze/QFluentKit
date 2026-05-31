@@ -5,6 +5,7 @@
 #include <QVariant>
 #include <QList>
 #include <QAbstractItemModel>
+#include <QPointer>
 
 #include "ComboItemModel.h"
 #include "ComboBoxHelper.h"
@@ -30,11 +31,14 @@ public:
     void setModel(QAbstractItemModel *model);
     void connectModel(QAbstractItemModel *model);
     void disconnectModel(QAbstractItemModel *model);
+    void clearModelDestroyedConnection();
+    void resetCurrentIndex();
 
-    QAbstractItemModel *m_model;
+    QPointer<QAbstractItemModel> m_model;
     ComboItemModel *m_internalModel;
     ComboBoxMenu *m_comboMenu = nullptr;
     LineEditButton *m_dropButton = nullptr;
+    QMetaObject::Connection m_modelDestroyedConnection;
     int m_currentIndex = -1;
     int m_maxVisibleItems = -1;
     QString m_placeholderText;
@@ -52,6 +56,7 @@ private slots:
     void onClearButtonClicked();
     void onReturnPressed();
     void onActivated(const QString &text);
+    void onModelDestroyed(QObject *object);
 
 private:
     EditableComboBox *q_ptr;
