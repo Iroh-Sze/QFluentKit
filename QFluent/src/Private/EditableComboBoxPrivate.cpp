@@ -79,9 +79,9 @@ void EditableComboBoxPrivate::resetCurrentIndex()
 
     int oldIndex = m_currentIndex;
     m_currentIndex = -1;
-    updateTextState();
 
     if (oldIndex != -1) {
+        updateTextState();
         emit q->currentIndexChanged(-1);
         emit q->currentTextChanged(QString());
     }
