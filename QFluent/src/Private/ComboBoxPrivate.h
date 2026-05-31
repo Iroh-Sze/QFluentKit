@@ -6,6 +6,7 @@
 #include <QList>
 #include <QAbstractItemModel>
 #include <QPersistentModelIndex>
+#include <QPointer>
 
 #include "ComboItemModel.h"
 #include "ComboBoxHelper.h"
@@ -32,11 +33,14 @@ public:
     void setModel(QAbstractItemModel *model);
     void connectModel(QAbstractItemModel *model);
     void disconnectModel(QAbstractItemModel *model);
+    void clearModelDestroyedConnection();
+    void resetCurrentIndex();
 
-    QAbstractItemModel *m_model;
+    QPointer<QAbstractItemModel> m_model;
     ComboItemModel *m_internalModel;
     ComboBoxMenu *m_comboMenu = nullptr;
     TranslateYAnimation *m_arrowAni = nullptr;
+    QMetaObject::Connection m_modelDestroyedConnection;
     int m_currentIndex = -1;
     int m_maxVisibleItems = -1;
     QString m_placeholderText;
@@ -52,6 +56,7 @@ private slots:
     void onModelReset();
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
     void onMenuAction(int index);
+    void onModelDestroyed(QObject *object);
 
 private:
     ComboBox *q_ptr;

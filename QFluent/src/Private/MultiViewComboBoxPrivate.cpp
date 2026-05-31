@@ -25,8 +25,6 @@ MultiViewComboBoxPrivate::~MultiViewComboBoxPrivate() = default;
 
 void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
 {
-    Q_Q(MultiViewComboBox);
-
     if (model == m_model)
         return;
 
@@ -34,20 +32,25 @@ void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
         model = m_internalModel;
     }
 
+    closeComboMenu();
     disconnectModel(m_model);
+    clearModelDestroyedConnection();
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
-    m_selectedIndexes.clear();
+    if (m_model != m_internalModel) {
+        m_modelDestroyedConnection = connect(m_model, &QObject::destroyed, this,
+                                             &MultiViewComboBoxPrivate::onModelDestroyed);
+    }
 
-    updateTextState();
-    emit q->currentIndexChanged(-1);
-    emit q->currentTextChanged(QString());
+    resetSelection();
 }
 
 void MultiViewComboBoxPrivate::connectModel(QAbstractItemModel *model)
 {
+    if (!model)
+        return;
+
     connect(model, &QAbstractItemModel::rowsInserted, this, &MultiViewComboBoxPrivate::onRowsInserted);
     connect(model, &QAbstractItemModel::rowsRemoved, this, &MultiViewComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &MultiViewComboBoxPrivate::onModelReset);
@@ -56,10 +59,31 @@ void MultiViewComboBoxPrivate::connectModel(QAbstractItemModel *model)
 
 void MultiViewComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
 {
+    if (!model)
+        return;
+
     disconnect(model, &QAbstractItemModel::rowsInserted, this, &MultiViewComboBoxPrivate::onRowsInserted);
     disconnect(model, &QAbstractItemModel::rowsRemoved, this, &MultiViewComboBoxPrivate::onRowsRemoved);
     disconnect(model, &QAbstractItemModel::modelReset, this, &MultiViewComboBoxPrivate::onModelReset);
     disconnect(model, &QAbstractItemModel::dataChanged, this, &MultiViewComboBoxPrivate::onDataChanged);
+}
+
+void MultiViewComboBoxPrivate::clearModelDestroyedConnection()
+{
+    if (m_modelDestroyedConnection) {
+        disconnect(m_modelDestroyedConnection);
+        m_modelDestroyedConnection = QMetaObject::Connection();
+    }
+}
+
+void MultiViewComboBoxPrivate::resetSelection()
+{
+    Q_Q(MultiViewComboBox);
+
+    m_selectedIndexes.clear();
+    updateTextState();
+    emit q->currentIndexChanged(-1);
+    emit q->currentTextChanged(QString());
 }
 
 void MultiViewComboBoxPrivate::createComboMenu()
@@ -253,4 +277,15 @@ void MultiViewComboBoxPrivate::onMenuAction(int index, bool checked)
             emit q->selectionChanged();
         }
     }
+}
+
+void MultiViewComboBoxPrivate::onModelDestroyed(QObject *object)
+{
+    Q_UNUSED(object);
+
+    closeComboMenu();
+    m_modelDestroyedConnection = QMetaObject::Connection();
+    m_model = m_internalModel;
+    connectModel(m_model);
+    resetSelection();
 }

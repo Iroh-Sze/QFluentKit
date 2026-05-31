@@ -5,6 +5,7 @@
 #include <QVariant>
 #include <QList>
 #include <QAbstractItemModel>
+#include <QPointer>
 
 #include "ComboItemModel.h"
 #include "ComboBoxHelper.h"
@@ -30,11 +31,14 @@ public:
     void setModel(QAbstractItemModel *model);
     void connectModel(QAbstractItemModel *model);
     void disconnectModel(QAbstractItemModel *model);
+    void clearModelDestroyedConnection();
+    void resetSelection();
 
-    QAbstractItemModel *m_model;
+    QPointer<QAbstractItemModel> m_model;
     ComboItemModel *m_internalModel;
     MultiViewComboBoxMenu *m_comboMenu = nullptr;
     TranslateYAnimation *m_arrowAni = nullptr;
+    QMetaObject::Connection m_modelDestroyedConnection;
     QList<int> m_selectedIndexes;
     int m_maxSelectedCount = -1;
     int m_maxVisibleItems = -1;
@@ -49,6 +53,7 @@ private slots:
     void onModelReset();
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
     void onMenuAction(int index, bool checked);
+    void onModelDestroyed(QObject *object);
 
 private:
     MultiViewComboBox *q_ptr;
