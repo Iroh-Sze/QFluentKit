@@ -14,7 +14,7 @@ ComboBoxPrivate::ComboBoxPrivate(ComboBox *q)
 {
     m_internalModel = new ComboItemModel(this);
     m_model = m_internalModel;
-    connectModel(m_model);
+    connectModel(m_model.data());
 }
 
 ComboBoxPrivate::~ComboBoxPrivate() = default;
@@ -29,13 +29,13 @@ void ComboBoxPrivate::setModel(QAbstractItemModel *model)
     }
 
     closeComboMenu();
-    disconnectModel(m_model);
+    disconnectModel(m_model.data());
     clearModelDestroyedConnection();
     m_model = model;
-    connectModel(m_model);
+    connectModel(m_model.data());
 
     if (m_model != m_internalModel) {
-        m_modelDestroyedConnection = connect(m_model, &QObject::destroyed, this,
+        m_modelDestroyedConnection = connect(m_model.data(), &QObject::destroyed, this,
                                              &ComboBoxPrivate::onModelDestroyed);
     }
 
@@ -254,6 +254,6 @@ void ComboBoxPrivate::onModelDestroyed(QObject *object)
     closeComboMenu();
     m_modelDestroyedConnection = QMetaObject::Connection();
     m_model = m_internalModel;
-    connectModel(m_model);
+    connectModel(m_model.data());
     resetCurrentIndex();
 }
