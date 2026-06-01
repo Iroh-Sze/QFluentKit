@@ -44,7 +44,7 @@ void EditableComboBox::setModel(QAbstractItemModel *model)
 QAbstractItemModel *EditableComboBox::model() const
 {
     Q_D(const EditableComboBox);
-    return d->m_model;
+    return d->m_model.data();
 }
 
 void EditableComboBox::addItem(const QString &text, const QVariant &userData)
