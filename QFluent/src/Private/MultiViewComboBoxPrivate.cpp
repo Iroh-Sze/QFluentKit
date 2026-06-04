@@ -2,7 +2,6 @@
 #include "QFluent/MultiViewComboBox.h"
 
 #include <QStyle>
-#include <QCursor>
 #include <QAction>
 #include <QPointer>
 #include <QAbstractItemModel>
@@ -38,7 +37,7 @@ void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
+    destroyComboMenu();
     m_selectedIndexes.clear();
 
     updateTextState();
@@ -67,11 +66,11 @@ void MultiViewComboBoxPrivate::createComboMenu()
     Q_Q(MultiViewComboBox);
 
     if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
+        destroyComboMenu();
     }
 
     m_comboMenu = new MultiViewComboBoxMenu("menu", q);
+    MultiViewComboBoxMenu *menu = m_comboMenu;
 
     for (int i = 0; i < m_model->rowCount(); ++i) {
         QModelIndex index = m_model->index(i, 0);
@@ -84,25 +83,24 @@ void MultiViewComboBoxPrivate::createComboMenu()
 
         QString text = m_model->data(index, Qt::DisplayRole).toString();
         QIcon icon = m_model->data(index, Qt::DecorationRole).value<QIcon>();
-        QAction *action = new QAction(icon, text, m_comboMenu);
-        if (icon.isNull()) {
-            action = new QAction(text, m_comboMenu);
-        }
+        QAction *action = icon.isNull()
+            ? new QAction(text, m_comboMenu)
+            : new QAction(icon, text, m_comboMenu);
         m_comboMenu->addAction(action);
         action->setData(i);
         action->setCheckable(true);
         if (m_selectedIndexes.contains(i)) {
             action->setChecked(true);
         }
-        connect(action, &QAction::triggered, this, [this, i](bool checked) { onMenuAction(i, checked); });
+        connect(action, &QAction::triggered, this, [this, i, action](bool checked) { onMenuAction(i, checked, action); });
     }
 
     QPointer<MultiViewComboBox> qPtr = q;
-    connect(m_comboMenu, &MultiViewComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(menu, &MultiViewComboBoxMenu::closed, q, [qPtr, this, menu]() {
         if (!qPtr) return;
-        QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
-        if (!qPtr->rect().contains(pos)) {
+        if (m_comboMenu == menu) {
             m_comboMenu = nullptr;
+            menu->deleteLater();
         }
     });
 }
@@ -124,8 +122,19 @@ void MultiViewComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    destroyComboMenu();
+}
+
+void MultiViewComboBoxPrivate::destroyComboMenu()
+{
+    MultiViewComboBoxMenu *menu = m_comboMenu;
+    if (!menu) {
+        return;
+    }
+
     m_comboMenu = nullptr;
+    menu->close();
+    menu->deleteLater();
 }
 
 void MultiViewComboBoxPrivate::toggleComboMenu()
@@ -225,17 +234,14 @@ void MultiViewComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const Q
     }
 }
 
-void MultiViewComboBoxPrivate::onMenuAction(int index, bool checked)
+void MultiViewComboBoxPrivate::onMenuAction(int index, bool checked, QAction *action)
 {
     Q_Q(MultiViewComboBox);
 
     if (checked) {
         if (m_maxSelectedCount > 0 && m_selectedIndexes.size() >= m_maxSelectedCount) {
-            if (m_comboMenu) {
-                QList<QAction *> actions = m_comboMenu->actions();
-                if (index < actions.size()) {
-                    actions[index]->setChecked(false);
-                }
+            if (action) {
+                action->setChecked(false);
             }
             return;
         }
