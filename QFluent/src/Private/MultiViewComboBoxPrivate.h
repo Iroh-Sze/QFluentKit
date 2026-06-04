@@ -12,6 +12,7 @@
 
 class TranslateYAnimation;
 class MultiViewComboBox;
+class QAction;
 
 class MultiViewComboBoxPrivate : public QObject
 {
@@ -24,6 +25,7 @@ public:
     void createComboMenu();
     void showComboMenu();
     void closeComboMenu();
+    void destroyComboMenu();
     void toggleComboMenu();
     void updateTextState();
 
@@ -48,7 +50,7 @@ private slots:
     void onRowsRemoved(const QModelIndex &parent, int first, int last);
     void onModelReset();
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
-    void onMenuAction(int index, bool checked);
+    void onMenuAction(int index, bool checked, QAction *action);
 
 private:
     MultiViewComboBox *q_ptr;

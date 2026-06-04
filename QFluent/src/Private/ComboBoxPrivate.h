@@ -26,6 +26,7 @@ public:
     void createComboMenu();
     void showComboMenu();
     void closeComboMenu();
+    void destroyComboMenu();
     void toggleComboMenu();
     void updateTextState();
 

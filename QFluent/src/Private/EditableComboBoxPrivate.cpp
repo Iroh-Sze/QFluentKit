@@ -7,7 +7,6 @@
 #include <QAbstractItemModel>
 #include <QAction>
 #include <QPointer>
-#include <QCursor>
 
 EditableComboBoxPrivate::EditableComboBoxPrivate(EditableComboBox *q)
     : QObject(q)
@@ -35,7 +34,7 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
+    destroyComboMenu();
 
     int oldIndex = m_currentIndex;
     m_currentIndex = -1;
@@ -68,11 +67,11 @@ void EditableComboBoxPrivate::createComboMenu()
     Q_Q(EditableComboBox);
 
     if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
+        destroyComboMenu();
     }
 
     m_comboMenu = new ComboBoxMenu("menu", q);
+    ComboBoxMenu *menu = m_comboMenu;
 
     for (int i = 0; i < m_model->rowCount(); ++i) {
         QModelIndex index = m_model->index(i, 0);
@@ -85,21 +84,20 @@ void EditableComboBoxPrivate::createComboMenu()
 
         QString text = m_model->data(index, Qt::DisplayRole).toString();
         QIcon icon = m_model->data(index, Qt::DecorationRole).value<QIcon>();
-        QAction *action = new QAction(icon, text, m_comboMenu);
-        if (icon.isNull()) {
-            action = new QAction(text, m_comboMenu);
-        }
+        QAction *action = icon.isNull()
+            ? new QAction(text, m_comboMenu)
+            : new QAction(icon, text, m_comboMenu);
         m_comboMenu->addAction(action);
         action->setData(i);
         connect(action, &QAction::triggered, this, [this, i]() { onMenuAction(i); });
     }
 
     QPointer<EditableComboBox> qPtr = q;
-    connect(m_comboMenu, &ComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(menu, &ComboBoxMenu::closed, q, [qPtr, this, menu]() {
         if (!qPtr) return;
-        QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
-        if (!qPtr->rect().contains(pos)) {
+        if (m_comboMenu == menu) {
             m_comboMenu = nullptr;
+            menu->deleteLater();
         }
     });
 }
@@ -131,8 +129,19 @@ void EditableComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    destroyComboMenu();
+}
+
+void EditableComboBoxPrivate::destroyComboMenu()
+{
+    ComboBoxMenu *menu = m_comboMenu;
+    if (!menu) {
+        return;
+    }
+
     m_comboMenu = nullptr;
+    menu->close();
+    menu->deleteLater();
 }
 
 void EditableComboBoxPrivate::toggleComboMenu()
