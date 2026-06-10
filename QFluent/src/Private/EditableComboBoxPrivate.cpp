@@ -35,7 +35,7 @@ void EditableComboBoxPrivate::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
+    closeComboMenu();
 
     int oldIndex = m_currentIndex;
     m_currentIndex = -1;
@@ -67,10 +67,7 @@ void EditableComboBoxPrivate::createComboMenu()
 {
     Q_Q(EditableComboBox);
 
-    if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
-    }
+    closeComboMenu();
 
     m_comboMenu = new ComboBoxMenu("menu", q);
 
@@ -98,8 +95,10 @@ void EditableComboBoxPrivate::createComboMenu()
     connect(m_comboMenu, &ComboBoxMenu::closed, q, [qPtr, this]() {
         if (!qPtr) return;
         QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
-        if (!qPtr->rect().contains(pos)) {
+        if (!qPtr->rect().contains(pos) && m_comboMenu) {
+            ComboBoxMenu *comboMenu = m_comboMenu;
             m_comboMenu = nullptr;
+            comboMenu->deleteLater();
         }
     });
 }
@@ -131,8 +130,10 @@ void EditableComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    ComboBoxMenu *comboMenu = m_comboMenu;
     m_comboMenu = nullptr;
+    comboMenu->close();
+    comboMenu->deleteLater();
 }
 
 void EditableComboBoxPrivate::toggleComboMenu()
