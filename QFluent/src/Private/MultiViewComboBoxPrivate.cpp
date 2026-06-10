@@ -38,7 +38,7 @@ void MultiViewComboBoxPrivate::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(m_model);
 
-    m_comboMenu = nullptr;
+    closeComboMenu();
     m_selectedIndexes.clear();
 
     updateTextState();
@@ -66,10 +66,7 @@ void MultiViewComboBoxPrivate::createComboMenu()
 {
     Q_Q(MultiViewComboBox);
 
-    if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
-    }
+    closeComboMenu();
 
     m_comboMenu = new MultiViewComboBoxMenu("menu", q);
 
@@ -101,8 +98,10 @@ void MultiViewComboBoxPrivate::createComboMenu()
     connect(m_comboMenu, &MultiViewComboBoxMenu::closed, q, [qPtr, this]() {
         if (!qPtr) return;
         QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
-        if (!qPtr->rect().contains(pos)) {
+        if (!qPtr->rect().contains(pos) && m_comboMenu) {
+            MultiViewComboBoxMenu *comboMenu = m_comboMenu;
             m_comboMenu = nullptr;
+            comboMenu->deleteLater();
         }
     });
 }
@@ -124,8 +123,10 @@ void MultiViewComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    MultiViewComboBoxMenu *comboMenu = m_comboMenu;
     m_comboMenu = nullptr;
+    comboMenu->close();
+    comboMenu->deleteLater();
 }
 
 void MultiViewComboBoxPrivate::toggleComboMenu()
@@ -179,18 +180,16 @@ void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int firs
     Q_Q(MultiViewComboBox);
 
     int count = last - first + 1;
-    bool changed = false;
     QList<int> newSelected;
     for (int idx : m_selectedIndexes) {
         if (idx >= first && idx <= last) {
-            changed = true;
         } else if (idx > last) {
             newSelected << idx - count;
         } else {
             newSelected << idx;
         }
     }
-    if (changed) {
+    if (newSelected != m_selectedIndexes) {
         m_selectedIndexes = newSelected;
         updateTextState();
         emit q->selectionChanged();
@@ -232,9 +231,11 @@ void MultiViewComboBoxPrivate::onMenuAction(int index, bool checked)
     if (checked) {
         if (m_maxSelectedCount > 0 && m_selectedIndexes.size() >= m_maxSelectedCount) {
             if (m_comboMenu) {
-                QList<QAction *> actions = m_comboMenu->actions();
-                if (index < actions.size()) {
-                    actions[index]->setChecked(false);
+                for (QAction *action : m_comboMenu->menuActions()) {
+                    if (action->data().toInt() == index) {
+                        action->setChecked(false);
+                        break;
+                    }
                 }
             }
             return;
