@@ -251,6 +251,12 @@ target_link_libraries(MyApp PRIVATE QFluent)
 
 QWindowKit 提供高级窗口管理功能（无边框窗口、毛玻璃效果等）：
 
+启用该选项前，请先初始化 QWindowKit 子模块：
+
+```bash
+git submodule update --init --recursive QFluentExample/libs/qwindowkit
+```
+
 ```cmake
 # 在构建示例程序时启用
 set(BUILD_QWINDOWKIT ON CACHE BOOL "Build with QWindowKit support" FORCE)
