@@ -220,8 +220,12 @@ void ScrollViewBase::scrollDown() {
 }
 
 void ScrollViewBase::scrollToPage(int page) {
-    int totalPages = qCeil(model()->rowCount() / (pageRows() * cols()));
-    if (page < 0 || page > totalPages) return;
+    const int pageSize = pageRows() * cols();
+    const int rowCount = model()->rowCount();
+    if (pageSize <= 0 || rowCount <= 0) return;
+
+    const int totalPages = (rowCount + pageSize - 1) / pageSize;
+    if (page < 0 || page >= totalPages) return;
 
     m_currentPage = page;
 
