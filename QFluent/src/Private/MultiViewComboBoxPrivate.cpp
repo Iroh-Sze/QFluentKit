@@ -179,18 +179,17 @@ void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int firs
     Q_Q(MultiViewComboBox);
 
     int count = last - first + 1;
-    bool changed = false;
     QList<int> newSelected;
     for (int idx : m_selectedIndexes) {
         if (idx >= first && idx <= last) {
-            changed = true;
+            continue;
         } else if (idx > last) {
             newSelected << idx - count;
         } else {
             newSelected << idx;
         }
     }
-    if (changed) {
+    if (newSelected != m_selectedIndexes) {
         m_selectedIndexes = newSelected;
         updateTextState();
         emit q->selectionChanged();
@@ -232,9 +231,11 @@ void MultiViewComboBoxPrivate::onMenuAction(int index, bool checked)
     if (checked) {
         if (m_maxSelectedCount > 0 && m_selectedIndexes.size() >= m_maxSelectedCount) {
             if (m_comboMenu) {
-                QList<QAction *> actions = m_comboMenu->actions();
-                if (index < actions.size()) {
-                    actions[index]->setChecked(false);
+                for (QAction *action : m_comboMenu->menuActions()) {
+                    if (action->data().toInt() == index) {
+                        action->setChecked(false);
+                        break;
+                    }
                 }
             }
             return;

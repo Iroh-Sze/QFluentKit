@@ -509,7 +509,7 @@ void NavigationTreeWidget::insertChild(int index, NavigationWidget* child) {
         parentNode = qobject_cast<NavigationTreeWidget*>(parentNode->treeParent());
     }
 
-    if (index < 0) {
+    if (index < 0 || index > static_cast<int>(m_treeChildren.size())) {
         index = static_cast<int>(m_treeChildren.size());
     }
 
