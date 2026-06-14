@@ -7,7 +7,6 @@
 #include <QAbstractItemModel>
 #include <QAction>
 #include <QPointer>
-#include <QCursor>
 
 EditableComboBoxPrivate::EditableComboBoxPrivate(EditableComboBox *q)
     : QObject(q)
@@ -67,10 +66,7 @@ void EditableComboBoxPrivate::createComboMenu()
 {
     Q_Q(EditableComboBox);
 
-    if (m_comboMenu) {
-        m_comboMenu->close();
-        m_comboMenu = nullptr;
-    }
+    closeComboMenu();
 
     m_comboMenu = new ComboBoxMenu("menu", q);
 
@@ -94,12 +90,15 @@ void EditableComboBoxPrivate::createComboMenu()
         connect(action, &QAction::triggered, this, [this, i]() { onMenuAction(i); });
     }
 
+    ComboBoxMenu *menu = m_comboMenu;
     QPointer<EditableComboBox> qPtr = q;
-    connect(m_comboMenu, &ComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(menu, &ComboBoxMenu::closed, q, [qPtr, this, menu]() {
         if (!qPtr) return;
-        QPoint pos = qPtr->mapFromGlobal(QCursor::pos());
-        if (!qPtr->rect().contains(pos)) {
+        if (m_comboMenu == menu) {
             m_comboMenu = nullptr;
+        }
+        if (menu) {
+            menu->deleteLater();
         }
     });
 }
@@ -131,13 +130,15 @@ void EditableComboBoxPrivate::closeComboMenu()
     if (!m_comboMenu) {
         return;
     }
-    m_comboMenu->close();
+    ComboBoxMenu *menu = m_comboMenu;
     m_comboMenu = nullptr;
+    menu->close();
+    menu->deleteLater();
 }
 
 void EditableComboBoxPrivate::toggleComboMenu()
 {
-    if (m_comboMenu != nullptr) {
+    if (m_comboMenu && m_comboMenu->isVisible()) {
         closeComboMenu();
     } else {
         showComboMenu();
