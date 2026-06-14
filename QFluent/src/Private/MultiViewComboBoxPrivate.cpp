@@ -93,11 +93,13 @@ void MultiViewComboBoxPrivate::createComboMenu()
         connect(action, &QAction::triggered, this, [this, i](bool checked) { onMenuAction(i, checked); });
     }
 
+    MultiViewComboBoxMenu *menu = m_comboMenu;
     QPointer<MultiViewComboBox> qPtr = q;
-    connect(m_comboMenu, &MultiViewComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(menu, &MultiViewComboBoxMenu::closed, q, [qPtr, this, menu]() {
         if (!qPtr) return;
-        MultiViewComboBoxMenu *menu = m_comboMenu;
-        m_comboMenu = nullptr;
+        if (m_comboMenu == menu) {
+            m_comboMenu = nullptr;
+        }
         if (menu) {
             menu->deleteLater();
         }

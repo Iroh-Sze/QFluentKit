@@ -89,11 +89,13 @@ void ComboBoxPrivate::createComboMenu()
         connect(action, &QAction::triggered, this, [this, i]() { onMenuAction(i); });
     }
 
+    ComboBoxMenu *menu = m_comboMenu;
     QPointer<ComboBox> qPtr = q;
-    connect(m_comboMenu, &ComboBoxMenu::closed, q, [qPtr, this]() {
+    connect(menu, &ComboBoxMenu::closed, q, [qPtr, this, menu]() {
         if (!qPtr) return;
-        ComboBoxMenu *menu = m_comboMenu;
-        m_comboMenu = nullptr;
+        if (m_comboMenu == menu) {
+            m_comboMenu = nullptr;
+        }
         if (menu) {
             menu->deleteLater();
         }
