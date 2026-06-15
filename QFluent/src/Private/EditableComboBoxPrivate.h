@@ -52,6 +52,7 @@ private slots:
     void onClearButtonClicked();
     void onReturnPressed();
     void onActivated(const QString &text);
+    void onModelDestroyed(QObject *object);
 
 private:
     EditableComboBox *q_ptr;

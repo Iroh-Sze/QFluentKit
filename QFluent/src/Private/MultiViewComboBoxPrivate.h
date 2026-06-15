@@ -49,6 +49,7 @@ private slots:
     void onModelReset();
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
     void onMenuAction(int index, bool checked);
+    void onModelDestroyed(QObject *object);
 
 private:
     MultiViewComboBox *q_ptr;
