@@ -140,9 +140,21 @@ void PopUpAniStackedWidget::removeWidget(QWidget *widget)
 
     // 安全删除动画对象（先停止，再延迟删除避免与 Qt parent 管理冲突）
     if (index >= 0 && index < m_animationInfos.size()) {
-        m_animationInfos[index].animation->stop();
-        m_animationInfos[index].animation->deleteLater();
+        QPropertyAnimation *animation = m_animationInfos[index].animation;
+        if (m_currentAnimation == animation) {
+            disconnect(m_currentAnimation, &QPropertyAnimation::finished,
+                       this, &PopUpAniStackedWidget::onAnimationFinished);
+            m_currentAnimation = nullptr;
+        }
+        animation->stop();
+        animation->deleteLater();
         m_animationInfos.removeAt(index);
+    }
+
+    if (m_nextIndex == index) {
+        m_nextIndex = -1;
+    } else if (m_nextIndex > index) {
+        --m_nextIndex;
     }
 
     QStackedWidget::removeWidget(widget);
@@ -251,7 +263,10 @@ void PopUpAniStackedWidget::onAnimationFinished()
                    this, &PopUpAniStackedWidget::onAnimationFinished);
     }
 
-    QStackedWidget::setCurrentIndex(m_nextIndex);
+    if (m_nextIndex >= 0 && m_nextIndex < count()) {
+        QStackedWidget::setCurrentIndex(m_nextIndex);
+    }
+    m_currentAnimation = nullptr;
     emit aniFinished();
 }
 
