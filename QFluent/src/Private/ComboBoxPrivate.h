@@ -52,6 +52,7 @@ private slots:
     void onModelReset();
     void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
     void onMenuAction(int index);
+    void onModelDestroyed(QObject *object);
 
 private:
     ComboBox *q_ptr;
