@@ -509,8 +509,9 @@ void NavigationTreeWidget::insertChild(int index, NavigationWidget* child) {
         parentNode = qobject_cast<NavigationTreeWidget*>(parentNode->treeParent());
     }
 
-    if (index < 0) {
-        index = static_cast<int>(m_treeChildren.size());
+    const int childCount = static_cast<int>(m_treeChildren.size());
+    if (index < 0 || index > childCount) {
+        index = childCount;
     }
 
     m_treeChildren.insert(m_treeChildren.begin() + index, treeChild);

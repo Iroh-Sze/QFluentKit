@@ -9,7 +9,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-set(BUILD_QWINDOWKIT OFF)
+option(BUILD_QWINDOWKIT "Build QFluentExample with QWindowKit integration" OFF)
 
 file(GLOB_RECURSE SOURCES
     CONFIGURE_DEPENDS

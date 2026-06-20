@@ -162,10 +162,9 @@ void ComboBoxPrivate::updateTextState()
 
 void ComboBoxPrivate::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
-    Q_UNUSED(parent);
     Q_Q(ComboBox);
 
-    if (m_currentIndex < 0)
+    if (parent.isValid() || m_currentIndex < 0)
         return;
 
     if (first <= m_currentIndex) {
@@ -177,10 +176,9 @@ void ComboBoxPrivate::onRowsInserted(const QModelIndex &parent, int first, int l
 
 void ComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int first, int last)
 {
-    Q_UNUSED(parent);
     Q_Q(ComboBox);
 
-    if (m_currentIndex < 0)
+    if (parent.isValid() || m_currentIndex < 0)
         return;
 
     int count = last - first + 1;
@@ -208,6 +206,9 @@ void ComboBoxPrivate::onModelReset()
 void ComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
 {
     Q_Q(ComboBox);
+
+    if (topLeft.parent().isValid())
+        return;
 
     if (m_currentIndex >= topLeft.row() && m_currentIndex <= bottomRight.row()) {
         updateTextState();
