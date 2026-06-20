@@ -161,36 +161,44 @@ void MultiViewComboBoxPrivate::updateTextState()
 
 void MultiViewComboBoxPrivate::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
-    Q_UNUSED(parent);
     Q_Q(MultiViewComboBox);
 
+    if (parent.isValid())
+        return;
+
     int count = last - first + 1;
+    bool changed = false;
     for (int i = 0; i < m_selectedIndexes.size(); ++i) {
         if (m_selectedIndexes[i] >= first) {
             m_selectedIndexes[i] += count;
+            changed = true;
         }
     }
-    updateTextState();
+    if (changed) {
+        updateTextState();
+        emit q->selectionChanged();
+    }
 }
 
 void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int first, int last)
 {
-    Q_UNUSED(parent);
     Q_Q(MultiViewComboBox);
 
+    if (parent.isValid())
+        return;
+
     int count = last - first + 1;
-    bool changed = false;
     QList<int> newSelected;
     for (int idx : m_selectedIndexes) {
         if (idx >= first && idx <= last) {
-            changed = true;
+            continue;
         } else if (idx > last) {
             newSelected << idx - count;
         } else {
             newSelected << idx;
         }
     }
-    if (changed) {
+    if (newSelected != m_selectedIndexes) {
         m_selectedIndexes = newSelected;
         updateTextState();
         emit q->selectionChanged();
@@ -210,8 +218,8 @@ void MultiViewComboBoxPrivate::onModelReset()
 
 void MultiViewComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
 {
-    Q_UNUSED(topLeft);
-    Q_UNUSED(bottomRight);
+    if (topLeft.parent().isValid())
+        return;
 
     bool affected = false;
     for (int idx : m_selectedIndexes) {
