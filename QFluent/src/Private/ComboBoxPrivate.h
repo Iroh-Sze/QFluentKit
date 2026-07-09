@@ -6,6 +6,7 @@
 #include <QList>
 #include <QAbstractItemModel>
 #include <QPersistentModelIndex>
+#include <QPointer>
 
 #include "ComboItemModel.h"
 #include "ComboBoxHelper.h"
@@ -33,7 +34,7 @@ public:
     void connectModel(QAbstractItemModel *model);
     void disconnectModel(QAbstractItemModel *model);
 
-    QAbstractItemModel *m_model;
+    QPointer<QAbstractItemModel> m_model;
     ComboItemModel *m_internalModel;
     ComboBoxMenu *m_comboMenu = nullptr;
     TranslateYAnimation *m_arrowAni = nullptr;
