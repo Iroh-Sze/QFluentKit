@@ -48,18 +48,41 @@ void ComboBoxPrivate::setModel(QAbstractItemModel *model)
 
 void ComboBoxPrivate::connectModel(QAbstractItemModel *model)
 {
+    if (!model) {
+        return;
+    }
+
     connect(model, &QAbstractItemModel::rowsInserted, this, &ComboBoxPrivate::onRowsInserted);
     connect(model, &QAbstractItemModel::rowsRemoved, this, &ComboBoxPrivate::onRowsRemoved);
     connect(model, &QAbstractItemModel::modelReset, this, &ComboBoxPrivate::onModelReset);
     connect(model, &QAbstractItemModel::dataChanged, this, &ComboBoxPrivate::onDataChanged);
+
+    if (model != m_internalModel) {
+        connect(model, &QObject::destroyed, this, [this]() {
+            Q_Q(ComboBox);
+
+            int oldIndex = m_currentIndex;
+            closeComboMenu();
+            m_model = m_internalModel;
+            connectModel(m_internalModel);
+            m_currentIndex = -1;
+            updateTextState();
+
+            if (oldIndex != -1) {
+                emit q->currentIndexChanged(-1);
+                emit q->currentTextChanged(QString());
+            }
+        });
+    }
 }
 
 void ComboBoxPrivate::disconnectModel(QAbstractItemModel *model)
 {
-    disconnect(model, &QAbstractItemModel::rowsInserted, this, &ComboBoxPrivate::onRowsInserted);
-    disconnect(model, &QAbstractItemModel::rowsRemoved, this, &ComboBoxPrivate::onRowsRemoved);
-    disconnect(model, &QAbstractItemModel::modelReset, this, &ComboBoxPrivate::onModelReset);
-    disconnect(model, &QAbstractItemModel::dataChanged, this, &ComboBoxPrivate::onDataChanged);
+    if (!model) {
+        return;
+    }
+
+    disconnect(model, nullptr, this, nullptr);
 }
 
 void ComboBoxPrivate::createComboMenu()

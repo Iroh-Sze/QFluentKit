@@ -37,7 +37,7 @@ void ComboBox::setModel(QAbstractItemModel *model)
 QAbstractItemModel *ComboBox::model() const
 {
     Q_D(const ComboBox);
-    return d->m_model;
+    return d->m_model.data();
 }
 
 void ComboBox::addItem(const QString &text, const QVariant &userData)
