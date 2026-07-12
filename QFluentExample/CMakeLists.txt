@@ -9,7 +9,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-set(BUILD_QWINDOWKIT OFF)
+option(BUILD_QWINDOWKIT "Build QFluentExample with QWindowKit support" OFF)
 
 file(GLOB_RECURSE SOURCES
     CONFIGURE_DEPENDS
@@ -67,6 +67,9 @@ if(WIN32 AND NOT BUILD_QWINDOWKIT)
 endif()
 
 if (BUILD_QWINDOWKIT)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libs/qwindowkit/CMakeLists.txt")
+        message(FATAL_ERROR "BUILD_QWINDOWKIT requires the qwindowkit submodule. Run: git submodule update --init --recursive QFluentExample/libs/qwindowkit")
+    endif()
     add_subdirectory(libs/qwindowkit)
     target_link_libraries(QFluentExample PRIVATE QWindowKit::Widgets)
     target_compile_definitions(QFluentExample PRIVATE USE_QWINDOWKIT=1)

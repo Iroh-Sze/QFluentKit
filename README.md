@@ -250,6 +250,12 @@ target_link_libraries(MyApp PRIVATE QFluent)
 
 QWindowKit provides advanced window management features (frameless windows, frosted glass effect, etc.):
 
+If you cloned the repository without submodules, initialize QWindowKit before enabling this option:
+
+```bash
+git submodule update --init --recursive QFluentExample/libs/qwindowkit
+```
+
 ```cmake
 # Enable when building the example program
 set(BUILD_QWINDOWKIT ON CACHE BOOL "Build with QWindowKit support" FORCE)
