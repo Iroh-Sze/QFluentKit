@@ -250,7 +250,7 @@ bool FluentTitleBar::eventFilter(QObject *obj, QEvent *event) {
         case QEvent::WindowStateChange: {
             if (maxBtn) {
                 maxBtn->setChecked(w->isMaximized());
-                const QString fillPath = ":/res/images/window_bar/%1_{color}.svg";
+                const QString fillPath = ":/res/window_bar/%1_{color}.svg";
                 maxBtn->setIcon(Fluent::icon(fillPath.arg(w->isMaximized() ? "restore" : "maximize")));
             }
             break;
