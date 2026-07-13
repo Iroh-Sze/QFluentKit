@@ -37,7 +37,7 @@ void MultiViewComboBox::setModel(QAbstractItemModel *model)
 QAbstractItemModel *MultiViewComboBox::model() const
 {
     Q_D(const MultiViewComboBox);
-    return d->m_model;
+    return d->m_model.data();
 }
 
 void MultiViewComboBox::addItem(const QString &text, const QVariant &userData)
