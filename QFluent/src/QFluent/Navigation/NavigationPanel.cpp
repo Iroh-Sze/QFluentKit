@@ -375,6 +375,14 @@ void NavigationPanel::removeWidget(const QString& routeKey)
 
     NavigationItem item = m_items.take(routeKey);
 
+    if (!item.parentRouteKey.isEmpty() && m_items.contains(item.parentRouteKey)) {
+        auto* parent = qobject_cast<NavigationTreeWidgetBase*>(
+            m_items.value(item.parentRouteKey).widget);
+        if (parent) {
+            parent->removeChild(item.widget);
+        }
+    }
+
     // 处理树形部件的子项
     if (auto* treeWidget = qobject_cast<NavigationTreeWidgetBase*>(item.widget)) {
         QList<NavigationWidget*> children = treeWidget->findChildren<NavigationWidget*>(
