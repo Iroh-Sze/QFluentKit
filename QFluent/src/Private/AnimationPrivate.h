@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QPoint>
 #include <QMap>
+#include <QPointer>
 #include <functional>
 #include <QRectF>
 #include <Qt>
@@ -70,7 +71,7 @@ public:
     QPoint m_offset;
     int m_blurRadius;
     bool m_isHover;
-    QGraphicsDropShadowEffect *m_shadowEffect;
+    QPointer<QGraphicsDropShadowEffect> m_shadowEffect;
 };
 
 // FluentAnimationPrivate

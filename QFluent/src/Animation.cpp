@@ -385,15 +385,17 @@ bool DropShadowAnimation::eventFilter(QObject *obj, QEvent *e) {
 
 void DropShadowAnimation::onAniFinished() {
     Q_D(DropShadowAnimation);
-    // Reset effect color to normal for next reuse
-    if (d->m_shadowEffect) {
-        d->m_shadowEffect->setColor(d->m_normalColor);
+
+    if (d->m_isHover) {
+        return;
     }
-    // Remove effect from widget when hover animation finishes
+
     if (auto* w = qobject_cast<QWidget*>(parent())) {
-        w->setGraphicsEffect(nullptr);
+        if (w->graphicsEffect() == d->m_shadowEffect) {
+            setTargetObject(nullptr);
+            w->setGraphicsEffect(nullptr);
+        }
     }
-    // Note: keep m_shadowEffect alive for reuse on next hover
 }
 
 // ==================== FluentAnimationProperObject ====================
