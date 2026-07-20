@@ -166,6 +166,8 @@ void EditableComboBoxPrivate::onRowsInserted(const QModelIndex &parent, int firs
     Q_UNUSED(parent);
     Q_Q(EditableComboBox);
 
+    closeComboMenu();
+
     if (m_currentIndex < 0)
         return;
 
@@ -180,6 +182,8 @@ void EditableComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int first
 {
     Q_UNUSED(parent);
     Q_Q(EditableComboBox);
+
+    closeComboMenu();
 
     if (m_currentIndex < 0)
         return;
@@ -200,6 +204,7 @@ void EditableComboBoxPrivate::onModelReset()
 {
     Q_Q(EditableComboBox);
 
+    closeComboMenu();
     m_currentIndex = -1;
     updateTextState();
     emit q->currentIndexChanged(-1);
@@ -209,6 +214,8 @@ void EditableComboBoxPrivate::onModelReset()
 void EditableComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
 {
     Q_Q(EditableComboBox);
+
+    closeComboMenu();
 
     if (m_currentIndex >= topLeft.row() && m_currentIndex <= bottomRight.row()) {
         updateTextState();
