@@ -164,6 +164,8 @@ void MultiViewComboBoxPrivate::onRowsInserted(const QModelIndex &parent, int fir
     Q_UNUSED(parent);
     Q_Q(MultiViewComboBox);
 
+    closeComboMenu();
+
     int count = last - first + 1;
     for (int i = 0; i < m_selectedIndexes.size(); ++i) {
         if (m_selectedIndexes[i] >= first) {
@@ -177,6 +179,8 @@ void MultiViewComboBoxPrivate::onRowsRemoved(const QModelIndex &parent, int firs
 {
     Q_UNUSED(parent);
     Q_Q(MultiViewComboBox);
+
+    closeComboMenu();
 
     int count = last - first + 1;
     bool changed = false;
@@ -201,6 +205,7 @@ void MultiViewComboBoxPrivate::onModelReset()
 {
     Q_Q(MultiViewComboBox);
 
+    closeComboMenu();
     m_selectedIndexes.clear();
     updateTextState();
     emit q->currentIndexChanged(-1);
@@ -212,6 +217,8 @@ void MultiViewComboBoxPrivate::onDataChanged(const QModelIndex &topLeft, const Q
 {
     Q_UNUSED(topLeft);
     Q_UNUSED(bottomRight);
+
+    closeComboMenu();
 
     bool affected = false;
     for (int idx : m_selectedIndexes) {
