@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QThread>
 #include <memory>
+#include <utility>
 #include <vector>
 #include <algorithm>
 
@@ -647,15 +648,22 @@ bool StyleSheetManager::isRegistered(QWidget* widget) const {
 }
 
 void StyleSheetManager::updateStyleSheet(bool lazy) {
-    QList<QWidget*> widgetsToRemove;
-    widgetsToRemove.reserve(10);
-
+    // setStyleSheet() sends QEvent::StyleChange synchronously. A handler can
+    // deregister or destroy a widget, so iterating m_widgets directly here
+    // would leave the active QHash iterator dangling.
+    std::vector<std::pair<QPointer<QWidget>, std::shared_ptr<StyleSheetCompose>>> entries;
+    entries.reserve(m_widgets.size());
     for (auto it = m_widgets.constBegin(); it != m_widgets.constEnd(); ++it) {
-        QWidget* widget = it.key();
-        const auto& source = it.value();
+        entries.emplace_back(it.key(), it.value());
+    }
 
-        if (!widget) {
-            widgetsToRemove.append(widget);
+    for (const auto& entry : entries) {
+        QWidget* widget = entry.first.data();
+        const auto& source = entry.second;
+
+        // Skip entries removed or replaced by a callback from an earlier
+        // stylesheet update. Newly registered widgets are styled on register.
+        if (!widget || m_widgets.value(widget) != source) {
             continue;
         }
 
@@ -665,14 +673,6 @@ void StyleSheetManager::updateStyleSheet(bool lazy) {
             if (auto* watcher = widget->findChild<CustomStyleSheetWatcher*>()) {
                 watcher->markDirty();
             }
-        }
-    }
-
-    for (QWidget* widget : widgetsToRemove) {
-        if (widget) {
-            deregisterWidget(widget);
-        } else {
-            m_widgets.remove(nullptr);
         }
     }
 }
