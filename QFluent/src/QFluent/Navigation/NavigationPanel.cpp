@@ -589,9 +589,14 @@ void NavigationPanel::showFlyoutNavigationMenu(NavigationTreeWidget* widget)
     QPoint pos = manager.position(widget);
     flyout->exec(pos, FlyoutAnimationType::SLIDE_RIGHT);
 
+    connect(widget, &QObject::destroyed, flyout, &QWidget::close);
+
+    QPointer<NavigationTreeWidget> guardedWidget(widget);
     connect(menu, &NavigationFlyoutMenu::expanded,
-            this, [this, flyout, widget, menu]() {
-        adjustFlyoutMenuSize(flyout, widget, menu);
+            this, [this, flyout, guardedWidget, menu]() {
+        if (guardedWidget) {
+            adjustFlyoutMenuSize(flyout, guardedWidget, menu);
+        }
     });
 }
 
