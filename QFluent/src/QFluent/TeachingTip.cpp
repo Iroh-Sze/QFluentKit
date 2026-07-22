@@ -199,6 +199,11 @@ TeachingTip::TeachingTip(FlyoutViewBase* view,
     if (parent && parent->window()) {
         parent->window()->installEventFilter(this);
     }
+
+    connect(target, &QObject::destroyed, this, [this]() {
+        m_target = nullptr;
+        close();
+    });
 }
 
 TeachingTip::~TeachingTip()
