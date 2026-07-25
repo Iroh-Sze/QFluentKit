@@ -217,24 +217,42 @@ void LineEdit::handleTextEdited(const QString &text)
     }
 }
 
+LineEdit::~LineEdit()
+{
+    if (CompleterMenu *menu = m_completerMenu.data()) {
+        menu->close();
+        // Auto-created menus are parented to this LineEdit and deleted as children.
+        // Externally supplied orphan menus must be closed and deleted explicitly.
+        if (menu->parent() != this)
+            menu->deleteLater();
+    }
+}
+
 void LineEdit::setCompleterMenu(CompleterMenu *menu)
 {
     if (m_completerMenu == menu)
         return;
 
-    if (!m_completerMenu.isNull())
-        disconnect(m_completerMenu, nullptr, m_completer, nullptr);
+    if (!m_completerMenu.isNull()) {
+        disconnect(m_completerMenu, nullptr, this, nullptr);
+        if (m_completer)
+            disconnect(m_completerMenu, nullptr, m_completer, nullptr);
+        m_completerMenu->close();
+    }
 
+    m_completerMenu = menu;
     if (!menu)
         return;
 
-    m_completerMenu = menu;
+    if (m_completer) {
+        connect(menu, &CompleterMenu::activated,
+                m_completer, static_cast<void (QCompleter::*)(const QString &)>(&QCompleter::activated));
+    }
 
-    connect(menu, &CompleterMenu::activated,
-            m_completer, static_cast<void (QCompleter::*)(const QString &)>(&QCompleter::activated));
-
-    connect(menu, &CompleterMenu::indexActivated,
+    connect(menu, &CompleterMenu::indexActivated, this,
             [this](const QModelIndex &idx) {
+        if (!m_completer)
+            return;
         QMetaObject::invokeMethod(m_completer, "activated", Qt::DirectConnection,
                                   Q_ARG(QModelIndex, idx));
     });
@@ -246,7 +264,7 @@ void LineEdit::showCompleterMenu()
         return;
 
     if (m_completerMenu.isNull())
-        setCompleterMenu(new CompleterMenu(this));
+        setCompleterMenu(new CompleterMenu(this, this));
 
     m_completer->setCompletionPrefix(this->text());
     bool changed = m_completerMenu->setCompletion(m_completer->completionModel(), m_completer->completionColumn());
@@ -386,6 +404,9 @@ void CompleterMenu::onItemClicked(QListWidgetItem *item)
 bool CompleterMenu::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() != QEvent::KeyPress)
+        return RoundMenu::eventFilter(obj, event);
+
+    if (!m_lineEdit)
         return RoundMenu::eventFilter(obj, event);
 
     auto *keyEvent = static_cast<QKeyEvent *>(event);

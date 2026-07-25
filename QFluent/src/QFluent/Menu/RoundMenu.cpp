@@ -123,6 +123,14 @@ void RoundMenu::removeAction(QAction *action)
         QListWidgetItem *item = d->m_view->item(i);
         QVariant data = item->data(Qt::UserRole);
         if (data.canConvert<QAction *>() && data.value<QAction *>() == action) {
+            disconnect(action, &QAction::changed, d, &RoundMenuPrivate::onActionChanged);
+            action->setProperty("item", QVariant());
+            action->setProperty("index", QVariant());
+            if (d->m_lastHoverItem == item || d->m_lastHoverSubMenuItem == item) {
+                d->m_showTimer->stop();
+                d->m_lastHoverItem = nullptr;
+                d->m_lastHoverSubMenuItem = nullptr;
+            }
             delete d->m_view->takeItem(i);
             d->m_actions.removeOne(action);
             adjustMenuSize();
@@ -179,6 +187,11 @@ void RoundMenu::removeMenu(RoundMenu *menu)
         return;
 
     QListWidgetItem *item = menu->d_ptr->m_menuItem;
+    if (d->m_lastHoverItem == item || d->m_lastHoverSubMenuItem == item) {
+        d->m_showTimer->stop();
+        d->m_lastHoverItem = nullptr;
+        d->m_lastHoverSubMenuItem = nullptr;
+    }
     d->m_subMenus.removeOne(menu);
     d->removeItem(item);
     adjustMenuSize();
@@ -203,6 +216,18 @@ void RoundMenu::addSeparator()
 void RoundMenu::clear()
 {
     Q_D(RoundMenu);
+
+    d->m_showTimer->stop();
+    d->m_lastHoverItem = nullptr;
+    d->m_lastHoverSubMenuItem = nullptr;
+
+    for (QAction *action : d->m_actions) {
+        if (!action)
+            continue;
+        disconnect(action, &QAction::changed, d, &RoundMenuPrivate::onActionChanged);
+        action->setProperty("item", QVariant());
+        action->setProperty("index", QVariant());
+    }
 
     d->m_actions.clear();
     d->m_subMenus.clear();
