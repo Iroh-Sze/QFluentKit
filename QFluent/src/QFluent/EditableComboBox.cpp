@@ -286,6 +286,8 @@ void EditableComboBox::setCompleterMenu(CompleterMenu *menu)
     Q_D(EditableComboBox);
 
     LineEdit::setCompleterMenu(menu);
+    if (!menu)
+        return;
     connect(menu, &CompleterMenu::activated, d, &EditableComboBoxPrivate::onActivated);
 }
 

@@ -44,7 +44,7 @@ class QFLUENT_EXPORT LineEdit : public QLineEdit
 
 public:
     explicit LineEdit(QWidget *parent = nullptr);
-    ~LineEdit() = default;
+    ~LineEdit() override;
 
     void setClearButtonEnabled(bool enable);
     bool isClearButtonEnabled() const;
