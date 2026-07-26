@@ -529,7 +529,7 @@ void TabBar::removeTab(int index)
     // 移除标签页
     TabItem *item = m_items.takeAt(index);
     m_itemMap.remove(item->routeKey());
-    m_hBoxLayout->removeWidget(item);
+    m_itemLayout->removeWidget(item);
     item->deleteLater();
 
     update();
@@ -681,21 +681,49 @@ void TabBar::setTabVisible(int index, bool visible)
     if (!item)
         return;
 
+    if (item->isVisible() == visible)
+        return;
+
     item->setVisible(visible);
 
-    if (visible && currentIndex() < 0) {
-        setCurrentIndex(0);
-    } else if (!visible) {
-        if (currentIndex() > 0) {
-            setCurrentIndex(currentIndex() - 1);
-            emit currentChanged(currentIndex());
-        } else if (m_items.size() == 1) {
-            m_currentIndex = -1;
-        } else {
-            setCurrentIndex(1);
-            m_currentIndex = 0;
-            emit currentChanged(0);
+    if (visible) {
+        // Restore a current tab if none is selected
+        if (currentIndex() < 0) {
+            setCurrentIndex(index);
+            emit currentChanged(index);
         }
+        return;
+    }
+
+    // Hiding a non-current tab must not change selection
+    if (index != currentIndex())
+        return;
+
+    // Current tab was hidden: select a nearby visible tab, or clear selection
+    int newIndex = -1;
+    for (int i = index - 1; i >= 0; --i) {
+        if (m_items[i]->isVisible()) {
+            newIndex = i;
+            break;
+        }
+    }
+    if (newIndex < 0) {
+        for (int i = index + 1; i < m_items.size(); ++i) {
+            if (m_items[i]->isVisible()) {
+                newIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (newIndex >= 0) {
+        setCurrentIndex(newIndex);
+        emit currentChanged(newIndex);
+    } else {
+        if (currentIndex() >= 0 && currentIndex() < m_items.size())
+            m_items[currentIndex()]->setSelected(false);
+        m_currentIndex = -1;
+        emit currentChanged(-1);
     }
 }
 
