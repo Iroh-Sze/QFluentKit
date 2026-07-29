@@ -19,6 +19,8 @@
 #include <QPainterPath>
 #include <QRect>
 #include <QSize>
+#include <algorithm>
+#include <vector>
 
 #include "Screen.h"
 
@@ -150,6 +152,16 @@ void GaussianBlur::boxBlur(QImage &image, int radius)
 
     int w = image.width();
     int h = image.height();
+    if (w <= 0 || h <= 0) return;
+
+    // Sliding-window box blur reads/writes up to index 2*r along each
+    // row/column. Clamp so the kernel stays inside the image; otherwise
+    // small sources (e.g. AcrylicBrush::setImage on a tiny pixmap, or
+    // AcrylicLabel with a small maxBlurSize) overrun the pixel buffer.
+    radius = std::min(radius, (w - 1) / 2);
+    radius = std::min(radius, (h - 1) / 2);
+    if (radius <= 0) return;
+
     int size = w * h;
 
     if (image.format() != QImage::Format_ARGB32 &&
