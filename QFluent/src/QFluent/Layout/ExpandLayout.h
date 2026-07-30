@@ -29,7 +29,12 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
+    void onWidgetDestroyed(QObject *obj);
     int doLayout(const QRect &rect, bool move) const;
+
     mutable QList<QLayoutItem*> m_items;
-    mutable QList<QWidget*> m_widgets; // 用于快速访问和事件过滤
+    // Parallel list for layout/event-filter; kept in sync on takeAt/destroyed
+    // because nested ExpandLayout is not the parent widget's top-level layout,
+    // so QWidget::~QWidget → parent->layout()->removeWidget() never reaches us.
+    mutable QList<QWidget*> m_widgets;
 };

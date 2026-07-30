@@ -17,6 +17,7 @@ ExpandLayout::~ExpandLayout()
 {
     qDeleteAll(m_items);
     m_items.clear();
+    m_widgets.clear();
 }
 
 void ExpandLayout::addWidget(QWidget *widget)
@@ -26,7 +27,28 @@ void ExpandLayout::addWidget(QWidget *widget)
 
     m_widgets.append(widget);
     widget->installEventFilter(this);
+    // Nested under another layout (e.g. SettingCardGroup), parent->layout() is not
+    // this ExpandLayout — so QWidget destruction will not call our takeAt().
+    connect(widget, &QObject::destroyed, this, &ExpandLayout::onWidgetDestroyed);
     addItem(new QWidgetItem(widget));
+}
+
+void ExpandLayout::onWidgetDestroyed(QObject *obj)
+{
+    auto *widget = static_cast<QWidget *>(obj);
+    m_widgets.removeAll(widget);
+
+    for (int i = 0; i < m_items.size(); ++i) {
+        QLayoutItem *item = m_items.at(i);
+        // item->widget() still equals the dying pointer during destroyed()
+        if (item && item->widget() == widget) {
+            m_items.removeAt(i);
+            delete item;
+            break;
+        }
+    }
+
+    invalidate();
 }
 
 void ExpandLayout::addItem(QLayoutItem *item)
@@ -52,8 +74,11 @@ QLayoutItem *ExpandLayout::takeAt(int index)
 {
     if (index >= 0 && index < m_items.size()) {
         QLayoutItem *item = m_items.takeAt(index);
-        if (index < m_widgets.size())
-            m_widgets.removeAt(index); // 同步移除 widget 引用
+        if (QWidget *w = item ? item->widget() : nullptr) {
+            m_widgets.removeAll(w);
+            w->removeEventFilter(this);
+            disconnect(w, &QObject::destroyed, this, &ExpandLayout::onWidgetDestroyed);
+        }
         return item;
     }
     return nullptr;
@@ -106,12 +131,13 @@ int ExpandLayout::doLayout(const QRect &rect, bool move) const
     int y = rect.y() + margin.top();
     int width = rect.width() - margin.left() - margin.right();
 
+    bool placedAny = false;
     for (int i = 0; i < m_widgets.size(); ++i) {
         QWidget *w = m_widgets.at(i);
         if (!w || w->isHidden())
             continue;
 
-        if (i > 0)
+        if (placedAny)
             y += spacing();
 
         if (move) {
@@ -119,6 +145,7 @@ int ExpandLayout::doLayout(const QRect &rect, bool move) const
         }
 
         y += w->height();
+        placedAny = true;
     }
 
     return y - rect.y();
