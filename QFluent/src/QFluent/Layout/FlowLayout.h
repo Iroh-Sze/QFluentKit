@@ -157,6 +157,11 @@ private:
     void onWidgetAdded(QWidget *widget, int index = -1);
 
     /**
+     * @brief 控件销毁时同步移除布局项（嵌套布局时 QWidget 析构不会调用本布局的 takeAt）
+     */
+    void onWidgetDestroyed(QObject *obj);
+
+    /**
      * @brief 清理控件关联的动画
      */
     void cleanupAnimation(QWidget *widget);
