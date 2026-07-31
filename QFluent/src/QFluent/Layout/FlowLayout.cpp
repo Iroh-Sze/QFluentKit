@@ -127,6 +127,10 @@ void FlowLayout::onWidgetAdded(QWidget *widget, int index)
         return;
     }
 
+    // Nested under another layout (e.g. SampleCardView), parent->layout() is not
+    // this FlowLayout — so QWidget destruction will not call our takeAt().
+    connect(widget, &QObject::destroyed, this, &FlowLayout::onWidgetDestroyed);
+
     // 安装事件过滤器（仅一次）
     if (!m_eventFilterInstalled) {
         if (QWidget *parent = widget->parentWidget()) {
@@ -210,13 +214,32 @@ QLayoutItem *FlowLayout::takeAt(int index)
         return nullptr;
     }
 
-    // 清理关联的动画
+    // 清理关联的动画，并断开销毁监听（避免与 onWidgetDestroyed 双重清理）
     if (QWidget *widget = item->widget()) {
+        disconnect(widget, &QObject::destroyed, this, &FlowLayout::onWidgetDestroyed);
         cleanupAnimation(widget);
     }
 
     // 返回布局项，调用者负责删除
     return item;
+}
+
+void FlowLayout::onWidgetDestroyed(QObject *obj)
+{
+    auto *widget = static_cast<QWidget *>(obj);
+
+    for (int i = 0; i < m_items.size(); ++i) {
+        QLayoutItem *item = m_items.at(i);
+        // item->widget() still equals the dying pointer during destroyed()
+        if (item && item->widget() == widget) {
+            m_items.removeAt(i);
+            cleanupAnimation(widget);
+            delete item;
+            break;
+        }
+    }
+
+    invalidate();
 }
 
 void FlowLayout::cleanupAnimation(QWidget *widget)
