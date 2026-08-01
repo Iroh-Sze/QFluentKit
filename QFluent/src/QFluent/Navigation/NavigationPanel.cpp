@@ -7,7 +7,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPointer>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QStyle>
@@ -590,17 +589,9 @@ void NavigationPanel::showFlyoutNavigationMenu(NavigationTreeWidget* widget)
     QPoint pos = manager.position(widget);
     flyout->exec(pos, FlyoutAnimationType::SLIDE_RIGHT);
 
-    // Anchor/tree/flyout can be destroyed while the popup is open (e.g. removeWidget).
-    // Capture QPointers so expanded() cannot UAF through stale raw widgets.
-    QPointer<Flyout> flyoutGuard(flyout);
-    QPointer<NavigationTreeWidget> widgetGuard(widget);
-    QPointer<NavigationFlyoutMenu> menuGuard(menu);
     connect(menu, &NavigationFlyoutMenu::expanded,
-            this, [this, flyoutGuard, widgetGuard, menuGuard]() {
-        if (!flyoutGuard || !widgetGuard || !menuGuard) {
-            return;
-        }
-        adjustFlyoutMenuSize(flyoutGuard.data(), widgetGuard.data(), menuGuard.data());
+            this, [this, flyout, widget, menu]() {
+        adjustFlyoutMenuSize(flyout, widget, menu);
     });
 }
 

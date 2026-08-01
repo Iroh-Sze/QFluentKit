@@ -12,7 +12,6 @@
 #include <QPainter>
 #include <QPauseAnimation>
 #include <QTimer>
-#include <QPointer>
 #include <QCoreApplication>
 
 // 辅助函数：创建自定义贝塞尔曲线
@@ -475,14 +474,13 @@ void EntranceTransitionStackedWidget::setUpTransitionAnimation(int nextIndex,
         nextWidget->resize(size());
         nextWidget->move(0, 0);
 
-        // Page may be removed/destroyed during the outDuration pause; guard the capture.
-        QPointer<QWidget> nextGuard(nextWidget);
+        // 在暂停后显示
         connect(nextWidgetAniGroup, &QSequentialAnimationGroup::currentAnimationChanged,
-                this, [nextGuard](QAbstractAnimation*) {
-            if (nextGuard && !nextGuard->isVisible()) {
-                nextGuard->show();
+                this, [nextWidget](QAbstractAnimation*) {
+            if (nextWidget && !nextWidget->isVisible()) {
+                nextWidget->show();
             }
-        });
+        }, Qt::UniqueConnection);
     }
 }
 

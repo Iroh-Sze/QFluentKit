@@ -379,6 +379,15 @@ ExpandGroupSettingCard::ExpandGroupSettingCard(Fluent::IconType type, const QStr
     initGroup();
 }
 
+ExpandGroupSettingCard::~ExpandGroupSettingCard() {
+    // Disconnect before QWidget deletes child group widgets, otherwise destroyed()
+    // would run after m_widgets has already been destroyed.
+    for (QWidget *w : m_widgets) {
+        disconnect(w, &QObject::destroyed, this, &ExpandGroupSettingCard::onGroupWidgetDestroyed);
+    }
+    m_widgets.clear();
+}
+
 void ExpandGroupSettingCard::initGroup() {
     viewLayout()->setContentsMargins(0, 0, 0, 0);
     viewLayout()->setSpacing(0);
@@ -395,12 +404,14 @@ void ExpandGroupSettingCard::addGroupWidget(QWidget *widget) {
 
     widget->setParent(view());
     m_widgets.append(widget);
-    // Nested/direct delete bypasses removeGroupWidget; drop the stale raw entry.
-    connect(widget, &QObject::destroyed, this, [this, widget]() {
-        m_widgets.removeOne(widget);
-    });
+    // Direct delete bypasses removeGroupWidget; drop the stale raw entry.
+    connect(widget, &QObject::destroyed, this, &ExpandGroupSettingCard::onGroupWidgetDestroyed);
     viewLayout()->addWidget(widget);
     adjustViewSize();
+}
+
+void ExpandGroupSettingCard::onGroupWidgetDestroyed(QObject *obj) {
+    m_widgets.removeAll(static_cast<QWidget *>(obj));
 }
 
 void ExpandGroupSettingCard::removeGroupWidget(QWidget *widget) {
@@ -411,7 +422,7 @@ void ExpandGroupSettingCard::removeGroupWidget(QWidget *widget) {
     int layoutIndex = viewLayout()->indexOf(widget);
     int index = m_widgets.indexOf(widget);
 
-    disconnect(widget, &QObject::destroyed, this, nullptr);
+    disconnect(widget, &QObject::destroyed, this, &ExpandGroupSettingCard::onGroupWidgetDestroyed);
     viewLayout()->removeWidget(widget);
     m_widgets.removeOne(widget);
 
@@ -440,9 +451,6 @@ void ExpandGroupSettingCard::adjustViewSize() {
     int h = 0;
     const auto &constWidgets = m_widgets;
     for (QWidget *w : constWidgets) {
-        if (!w) {
-            continue;
-        }
         h += w->sizeHint().height() + 3;
     }
     spaceWidget()->setFixedHeight(h);
