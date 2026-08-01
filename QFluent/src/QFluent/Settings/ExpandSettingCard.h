@@ -139,6 +139,7 @@ class ExpandGroupSettingCard : public ExpandSettingCard {
 public:
     explicit ExpandGroupSettingCard(const QIcon &icon, const QString &title, const QString &content = QString(), QWidget *parent = nullptr);
     explicit ExpandGroupSettingCard(Fluent::IconType type, const QString &title, const QString &content = QString(), QWidget *parent = nullptr);
+    ~ExpandGroupSettingCard() override;
 
     void addGroupWidget(QWidget *widget);
     void removeGroupWidget(QWidget *widget);
@@ -146,6 +147,7 @@ public:
 private:
     void initGroup();
     void adjustViewSize();
+    void onGroupWidgetDestroyed(QObject *obj);
 
     QList<QWidget *> m_widgets;
 };
