@@ -144,10 +144,21 @@ bool LineEdit::isClearButtonEnabled() const
 
 void LineEdit::setCompleter(QCompleter *completer)
 {
-    if (m_completer)
+    if (m_completer) {
+        disconnect(m_completer, &QObject::destroyed, this, nullptr);
         m_completer->deleteLater();
+        m_completer = nullptr;
+    }
 
     m_completer = completer;
+    if (m_completer) {
+        // Completer may be destroyed independently (shared / external parent).
+        connect(m_completer, &QObject::destroyed, this, [this]() {
+            m_completer = nullptr;
+            if (m_completerTimer)
+                m_completerTimer->stop();
+        });
+    }
 }
 
 QCompleter *LineEdit::completer() const
@@ -222,7 +233,7 @@ void LineEdit::setCompleterMenu(CompleterMenu *menu)
     if (m_completerMenu == menu)
         return;
 
-    if (!m_completerMenu.isNull())
+    if (!m_completerMenu.isNull() && m_completer)
         disconnect(m_completerMenu, nullptr, m_completer, nullptr);
 
     if (!menu)
@@ -230,11 +241,15 @@ void LineEdit::setCompleterMenu(CompleterMenu *menu)
 
     m_completerMenu = menu;
 
-    connect(menu, &CompleterMenu::activated,
-            m_completer, static_cast<void (QCompleter::*)(const QString &)>(&QCompleter::activated));
+    if (m_completer) {
+        connect(menu, &CompleterMenu::activated,
+                m_completer, static_cast<void (QCompleter::*)(const QString &)>(&QCompleter::activated));
+    }
 
-    connect(menu, &CompleterMenu::indexActivated,
+    connect(menu, &CompleterMenu::indexActivated, this,
             [this](const QModelIndex &idx) {
+        if (!m_completer)
+            return;
         QMetaObject::invokeMethod(m_completer, "activated", Qt::DirectConnection,
                                   Q_ARG(QModelIndex, idx));
     });

@@ -385,12 +385,20 @@ void ExpandGroupSettingCard::initGroup() {
 }
 
 void ExpandGroupSettingCard::addGroupWidget(QWidget *widget) {
+    if (!widget || m_widgets.contains(widget)) {
+        return;
+    }
+
     if (viewLayout()->count() >= 1) {
         viewLayout()->addWidget(new GroupSeparator(view()));
     }
 
     widget->setParent(view());
     m_widgets.append(widget);
+    // Nested/direct delete bypasses removeGroupWidget; drop the stale raw entry.
+    connect(widget, &QObject::destroyed, this, [this, widget]() {
+        m_widgets.removeOne(widget);
+    });
     viewLayout()->addWidget(widget);
     adjustViewSize();
 }
@@ -403,6 +411,7 @@ void ExpandGroupSettingCard::removeGroupWidget(QWidget *widget) {
     int layoutIndex = viewLayout()->indexOf(widget);
     int index = m_widgets.indexOf(widget);
 
+    disconnect(widget, &QObject::destroyed, this, nullptr);
     viewLayout()->removeWidget(widget);
     m_widgets.removeOne(widget);
 
@@ -431,6 +440,9 @@ void ExpandGroupSettingCard::adjustViewSize() {
     int h = 0;
     const auto &constWidgets = m_widgets;
     for (QWidget *w : constWidgets) {
+        if (!w) {
+            continue;
+        }
         h += w->sizeHint().height() + 3;
     }
     spaceWidget()->setFixedHeight(h);
