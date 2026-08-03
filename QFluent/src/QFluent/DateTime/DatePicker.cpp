@@ -215,37 +215,112 @@ int DatePicker::monthColumnWidth()
 
 void DatePicker::onColumnValueChanged(PickerPanel* panel, int index, const QString& value)
 {
-    if (index == m_dayIndex) {
+    Q_UNUSED(value);
+
+    if (!panel || m_dayIndex < 0 || m_dayIndex >= m_columns.size()
+            || !m_columns[m_dayIndex]->isVisible()) {
         return;
     }
-    
-    int month = decodeValue(m_monthIndex, panel->columnValue(m_monthIndex)).toInt();
-    int year = decodeValue(m_yearIndex, panel->columnValue(m_yearIndex)).toInt();
+
+    // Panel list indices only include visible columns; map m_*Index → panel index.
+    auto panelIndexFor = [this](int columnIndex) -> int {
+        int visible = 0;
+        for (int i = 0; i < m_columns.size(); ++i) {
+            if (!m_columns[i]->isVisible()) {
+                continue;
+            }
+            if (i == columnIndex) {
+                return visible;
+            }
+            ++visible;
+        }
+        return -1;
+    };
+
+    const int dayPanelIndex = panelIndexFor(m_dayIndex);
+    if (dayPanelIndex < 0 || index == dayPanelIndex) {
+        return;
+    }
+
+    const int monthPanelIndex = panelIndexFor(m_monthIndex);
+    const int yearPanelIndex = panelIndexFor(m_yearIndex);
+
+    const QString monthText = monthPanelIndex >= 0
+            ? panel->columnValue(monthPanelIndex)
+            : m_columns[m_monthIndex]->value();
+    const QString yearText = yearPanelIndex >= 0
+            ? panel->columnValue(yearPanelIndex)
+            : m_columns[m_yearIndex]->value();
+
+    int month = decodeValue(m_monthIndex, monthText).toInt();
+    int year = decodeValue(m_yearIndex, yearText).toInt();
     int daysInMonth = m_calendar.daysInMonth(month, year);
-    
-    CycleListWidget* dayColumn = panel->column(m_dayIndex);
+    if (daysInMonth <= 0) {
+        return;
+    }
+
+    CycleListWidget* dayColumn = panel->column(dayPanelIndex);
+    if (!dayColumn || !dayColumn->currentItem()) {
+        return;
+    }
+
     QString currentDay = dayColumn->currentItem()->text();
-    
+
     QList<QVariant> dayList;
     for (int day = 1; day <= daysInMonth; ++day) {
         dayList << day;
     }
     setColumnItems(m_dayIndex, dayList);
-    
+
     dayColumn->setItems(m_columns[m_dayIndex]->items());
     dayColumn->setSelectedItem(currentDay);
 }
 
 void DatePicker::onConfirmed(const QStringList& value)
 {
-    int year = decodeValue(m_yearIndex, value[m_yearIndex]).toInt();
-    int month = decodeValue(m_monthIndex, value[m_monthIndex]).toInt();
-    int day = decodeValue(m_dayIndex, value[m_dayIndex]).toInt();
-    
+    // Confirmed values are visible columns only (same order as panel). Remap to calendar fields.
+    auto visibleValue = [this, &value](int columnIndex) -> QString {
+        int visible = 0;
+        for (int i = 0; i < m_columns.size(); ++i) {
+            if (!m_columns[i]->isVisible()) {
+                continue;
+            }
+            if (i == columnIndex) {
+                if (visible >= 0 && visible < value.size()) {
+                    return value[visible];
+                }
+                return QString();
+            }
+            ++visible;
+        }
+        // Hidden column: keep the last committed column value.
+        if (columnIndex >= 0 && columnIndex < m_columns.size()) {
+            return m_columns[columnIndex]->value();
+        }
+        return QString();
+    };
+
+    const QString yearText = visibleValue(m_yearIndex);
+    const QString monthText = visibleValue(m_monthIndex);
+    const QString dayText = visibleValue(m_dayIndex);
+    if (yearText.isEmpty() || monthText.isEmpty()) {
+        return;
+    }
+
+    int year = decodeValue(m_yearIndex, yearText).toInt();
+    int month = decodeValue(m_monthIndex, monthText).toInt();
+    int day = dayText.isEmpty() ? 1 : decodeValue(m_dayIndex, dayText).toInt();
+
+    // Clamp day when the day column was hidden or stale relative to month/year.
+    int daysInMonth = m_calendar.daysInMonth(month, year);
+    if (daysInMonth > 0) {
+        day = qBound(1, day, daysInMonth);
+    }
+
     QDate newDate(year, month, day);
     QDate oldDate = m_date;
     setDate(newDate);
-    
+
     if (oldDate != newDate) {
         emit dateChanged(newDate);
     }
