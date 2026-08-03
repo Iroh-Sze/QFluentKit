@@ -385,6 +385,17 @@ NavigationTreeWidget::NavigationTreeWidget(const QString &text, const QIcon &ico
     initWidget();
 }
 
+NavigationTreeWidget::~NavigationTreeWidget()
+{
+    // Disconnect before QWidget deletes child tree widgets, otherwise destroyed()
+    // would run after m_treeChildren has already been destroyed.
+    for (NavigationTreeWidget* child : m_treeChildren) {
+        disconnect(child, &QObject::destroyed,
+                   this, &NavigationTreeWidget::onTreeChildDestroyed);
+    }
+    m_treeChildren.clear();
+}
+
 void NavigationTreeWidget::initWidget() {
     m_vBoxLayout->setSpacing(4);
     m_vBoxLayout->setContentsMargins(0, 0, 0, 0);
@@ -499,6 +510,10 @@ void NavigationTreeWidget::insertChild(int index, NavigationWidget* child) {
     connect(treeChild->m_expandAnimation, &QPropertyAnimation::valueChanged,
             this, &NavigationTreeWidget::expanded);
 
+    // Direct delete bypasses removeChild; drop the stale raw entry.
+    connect(treeChild, &QObject::destroyed,
+            this, &NavigationTreeWidget::onTreeChildDestroyed);
+
     // 递归连接高度变化信号到父级
     NavigationTreeWidget* parentNode = qobject_cast<NavigationTreeWidget*>(treeParent());
     while (parentNode) {
@@ -530,6 +545,14 @@ void NavigationTreeWidget::insertChild(int index, NavigationWidget* child) {
     update();
 }
 
+void NavigationTreeWidget::onTreeChildDestroyed(QObject* obj) {
+    auto* treeChild = static_cast<NavigationTreeWidget*>(obj);
+    auto it = std::find(m_treeChildren.begin(), m_treeChildren.end(), treeChild);
+    if (it != m_treeChildren.end()) {
+        m_treeChildren.erase(it);
+    }
+}
+
 void NavigationTreeWidget::removeChild(NavigationWidget* child) {
     NavigationTreeWidget* treeChild = qobject_cast<NavigationTreeWidget*>(child);
     if (!treeChild)
@@ -537,6 +560,8 @@ void NavigationTreeWidget::removeChild(NavigationWidget* child) {
 
     auto it = std::find(m_treeChildren.begin(), m_treeChildren.end(), treeChild);
     if (it != m_treeChildren.end()) {
+        disconnect(treeChild, &QObject::destroyed,
+                   this, &NavigationTreeWidget::onTreeChildDestroyed);
         m_treeChildren.erase(it);
         m_vBoxLayout->removeWidget(treeChild);
     }

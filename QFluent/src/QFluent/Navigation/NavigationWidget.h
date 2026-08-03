@@ -163,7 +163,7 @@ class QFLUENT_EXPORT NavigationTreeWidget : public NavigationTreeWidgetBase {
 public:
     NavigationTreeWidget(const QString &text, const QIcon &icon,
                         bool isSelectable, QWidget* parent = nullptr);
-    ~NavigationTreeWidget() override = default;
+    ~NavigationTreeWidget() override;
 
     void addChild(NavigationWidget* child) override;
     void insertChild(int index, NavigationWidget* child) override;
@@ -199,6 +199,7 @@ protected:
 
 private slots:
     void onItemClicked(bool triggerByUser, bool clickArrow);
+    void onTreeChildDestroyed(QObject* obj);
 
 private:
     void initWidget();
