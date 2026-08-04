@@ -125,6 +125,13 @@ QVector<QString> TextWrapPrivate::splitLongToken(const QString &token, int width
             chunkWidth += getCharWidth(token[i]);
             ++i;
         }
+        // A single CJK/wide character has width 2. When wrap width is 1
+        // (or any value smaller than the next character), the loop above
+        // never advances and would hang the UI thread forever.
+        if (chunk.isEmpty() && i < len) {
+            chunk += token[i];
+            ++i;
+        }
         if (!chunk.isEmpty()) {
             chunks.append(chunk);
         }
@@ -200,6 +207,9 @@ std::pair<QString, bool> TextWrapPrivate::wrapLine(const QString &text, int widt
             }
 
             auto chunks = splitLongToken(token, width);
+            if (chunks.isEmpty()) {
+                continue;
+            }
             for (int i = 0; i < chunks.size() - 1; ++i) {
                 wrappedLines.append(chunks[i].trimmed());
             }
