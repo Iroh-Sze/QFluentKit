@@ -31,6 +31,26 @@ OpacityAniStackedWidget::OpacityAniStackedWidget(QWidget *parent)
 {
 }
 
+void OpacityAniStackedWidget::attachAnimation(int index, QWidget *widget)
+{
+    auto effect = new QGraphicsOpacityEffect(this);
+    effect->setOpacity(1.0);
+    widget->setGraphicsEffect(effect);
+
+    auto animation = new QPropertyAnimation(effect, "opacity", this);
+    animation->setDuration(220);
+    connect(animation, &QPropertyAnimation::finished,
+            this, &OpacityAniStackedWidget::onAnimationFinished);
+
+    if (index < 0 || index >= m_effects.size()) {
+        m_effects.append(effect);
+        m_animations.append(animation);
+    } else {
+        m_effects.insert(index, effect);
+        m_animations.insert(index, animation);
+    }
+}
+
 void OpacityAniStackedWidget::addWidget(QWidget *widget)
 {
     if (!widget) {
@@ -38,26 +58,34 @@ void OpacityAniStackedWidget::addWidget(QWidget *widget)
     }
 
     QStackedWidget::addWidget(widget);
+    attachAnimation(m_effects.size(), widget);
+}
 
-    // 创建透明度效果
-    auto effect = new QGraphicsOpacityEffect(this);
-    effect->setOpacity(1.0);
-    widget->setGraphicsEffect(effect);
+void OpacityAniStackedWidget::insertWidget(int index, QWidget *widget)
+{
+    if (!widget) {
+        return;
+    }
 
-    // 创建动画
-    auto animation = new QPropertyAnimation(effect, "opacity", this);
-    animation->setDuration(220);
-    connect(animation, &QPropertyAnimation::finished,
-            this, &OpacityAniStackedWidget::onAnimationFinished);
+    if (index < 0 || index > count()) {
+        index = count();
+    }
 
-    m_effects.append(effect);
-    m_animations.append(animation);
+    QStackedWidget::insertWidget(index, widget);
+    attachAnimation(index, widget);
 }
 
 void OpacityAniStackedWidget::setCurrentIndex(int index)
 {
     int currentIdx = currentIndex();
     if (index == currentIdx || index < 0 || index >= count()) {
+        return;
+    }
+
+    // Parallel effect/animation arrays must track the stack; fall back if desynced
+    if (index >= m_animations.size() || index >= m_effects.size()
+            || currentIdx >= m_animations.size() || currentIdx >= m_effects.size()) {
+        QStackedWidget::setCurrentIndex(index);
         return;
     }
 
@@ -131,6 +159,26 @@ void PopUpAniStackedWidget::addWidget(QWidget *widget, int deltaX, int deltaY)
     m_animationInfos.append(PopUpAniInfo(widget, deltaX, deltaY, animation));
 }
 
+void PopUpAniStackedWidget::insertWidget(int index, QWidget *widget, int deltaX, int deltaY)
+{
+    if (!widget) {
+        return;
+    }
+
+    if (index < 0 || index > count()) {
+        index = count();
+    }
+
+    QStackedWidget::insertWidget(index, widget);
+
+    auto animation = new QPropertyAnimation(widget, "pos", this);
+    if (index >= m_animationInfos.size()) {
+        m_animationInfos.append(PopUpAniInfo(widget, deltaX, deltaY, animation));
+    } else {
+        m_animationInfos.insert(index, PopUpAniInfo(widget, deltaX, deltaY, animation));
+    }
+}
+
 void PopUpAniStackedWidget::removeWidget(QWidget *widget)
 {
     int index = indexOf(widget);
@@ -170,6 +218,13 @@ void PopUpAniStackedWidget::setCurrentIndex(int index, bool needPopOut,
         return;
     }
 
+    const int currentIdx = currentIndex();
+    if (index >= m_animationInfos.size() || currentIdx < 0
+            || currentIdx >= m_animationInfos.size()) {
+        QStackedWidget::setCurrentIndex(index);
+        return;
+    }
+
     // 停止正在运行的动画
     if (m_currentAnimation && m_currentAnimation->state() == QAbstractAnimation::Running) {
         // 断开旧的信号连接
@@ -183,7 +238,7 @@ void PopUpAniStackedWidget::setCurrentIndex(int index, bool needPopOut,
     m_nextIndex = index;
 
     PopUpAniInfo &nextAniInfo = m_animationInfos[index];
-    PopUpAniInfo &currentAniInfo = m_animationInfos[currentIndex()];
+    PopUpAniInfo &currentAniInfo = m_animationInfos[currentIdx];
 
     QWidget *currentWidget = this->currentWidget();
     QWidget *nextWidget = nextAniInfo.widget;

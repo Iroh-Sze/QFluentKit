@@ -30,6 +30,7 @@ public:
     ~OpacityAniStackedWidget() override = default;
 
     void addWidget(QWidget *widget);
+    void insertWidget(int index, QWidget *widget);
     void setCurrentIndex(int index);
     void setCurrentWidget(QWidget *widget);
 
@@ -37,6 +38,8 @@ private slots:
     void onAnimationFinished();
 
 private:
+    void attachAnimation(int index, QWidget *widget);
+
     int m_nextIndex;                                // 下一个要显示的索引
     QList<QGraphicsOpacityEffect*> m_effects;       // 透明度效果列表
     QList<QPropertyAnimation*> m_animations;        // 动画列表
@@ -72,6 +75,7 @@ public:
     ~PopUpAniStackedWidget() override = default;
 
     void addWidget(QWidget *widget, int deltaX = 0, int deltaY = 76);
+    void insertWidget(int index, QWidget *widget, int deltaX = 0, int deltaY = 76);
     void removeWidget(QWidget *widget);
 
     void setAnimationEnabled(bool isEnabled);
