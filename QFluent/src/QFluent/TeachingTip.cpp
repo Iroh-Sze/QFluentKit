@@ -113,12 +113,15 @@ TeachTipBubble::TeachTipBubble(FlyoutViewBase* view,
     , m_hBoxLayout(nullptr)
     , m_view(view)
 {
+    // Layout must exist before doLayout(): every tail manager writes
+    // contentsMargins through hBoxLayout().
+    m_hBoxLayout = new QHBoxLayout(this);
+
     m_manager = TeachingTipManager::make(tailPosition);
     if (m_manager) {
         m_manager->setParent(this);
         m_manager->doLayout(this);
     }
-    m_hBoxLayout = new QHBoxLayout(this);
 
     if (m_hBoxLayout && m_view) {
         m_hBoxLayout->addWidget(m_view);
@@ -367,6 +370,9 @@ TeachingTipManager::TeachingTipManager(QObject* parent)
 
 void TeachingTipManager::doLayout(TeachTipBubble* tip)
 {
+    if (!tip || !tip->hBoxLayout()) {
+        return;
+    }
     tip->hBoxLayout()->setContentsMargins(0, 0, 0, 0);
 }
 
@@ -442,6 +448,9 @@ TopTailTeachingTipManager::TopTailTeachingTipManager(QObject* parent)
 
 void TopTailTeachingTipManager::doLayout(TeachTipBubble* tip)
 {
+    if (!tip || !tip->hBoxLayout()) {
+        return;
+    }
     tip->hBoxLayout()->setContentsMargins(0, 8, 0, 0);
 }
 
@@ -487,6 +496,9 @@ BottomTailTeachingTipManager::BottomTailTeachingTipManager(QObject* parent)
 
 void BottomTailTeachingTipManager::doLayout(TeachTipBubble* tip)
 {
+    if (!tip || !tip->hBoxLayout()) {
+        return;
+    }
     tip->hBoxLayout()->setContentsMargins(0, 0, 0, 8);
 }
 
@@ -527,6 +539,9 @@ LeftTailTeachingTipManager::LeftTailTeachingTipManager(QObject* parent)
 
 void LeftTailTeachingTipManager::doLayout(TeachTipBubble* tip)
 {
+    if (!tip || !tip->hBoxLayout()) {
+        return;
+    }
     tip->hBoxLayout()->setContentsMargins(8, 0, 0, 0);
 }
 
@@ -573,6 +588,9 @@ RightTailTeachingTipManager::RightTailTeachingTipManager(QObject* parent)
 
 void RightTailTeachingTipManager::doLayout(TeachTipBubble* tip)
 {
+    if (!tip || !tip->hBoxLayout()) {
+        return;
+    }
     tip->hBoxLayout()->setContentsMargins(0, 0, 8, 0);
 }
 
