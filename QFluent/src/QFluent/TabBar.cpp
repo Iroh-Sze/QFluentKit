@@ -510,27 +510,32 @@ void TabBar::removeTab(int index)
     if (index < 0 || index >= m_items.size())
         return;
 
-    // 调整当前索引
-    if (index < currentIndex()) {
-        m_currentIndex--;
-    } else if (index == currentIndex()) {
-        if (currentIndex() > 0) {
-            setCurrentIndex(currentIndex() - 1);
-            emit currentChanged(currentIndex());
-        } else if (m_items.size() == 1) {
-            m_currentIndex = -1;
-        } else {
-            setCurrentIndex(1);
-            m_currentIndex = 0;
-            emit currentChanged(0);
-        }
-    }
+    const int oldCurrent = currentIndex();
+    const bool removingCurrent = (index == oldCurrent);
 
-    // 移除标签页
     TabItem *item = m_items.takeAt(index);
     m_itemMap.remove(item->routeKey());
-    m_hBoxLayout->removeWidget(item);
+    m_itemLayout->removeWidget(item);
     item->deleteLater();
+
+    if (removingCurrent) {
+        // Select the previous tab, or the tab that slid into index 0.
+        // Reset m_currentIndex so setCurrentIndex applies to the post-removal list.
+        int newIndex = -1;
+        if (!m_items.isEmpty())
+            newIndex = (index > 0) ? (index - 1) : 0;
+
+        m_currentIndex = -1;
+        if (newIndex >= 0) {
+            setCurrentIndex(newIndex);
+            emit currentChanged(newIndex);
+        } else {
+            emit currentChanged(-1);
+        }
+    } else if (index < oldCurrent) {
+        m_currentIndex = oldCurrent - 1;
+        emit currentChanged(m_currentIndex);
+    }
 
     update();
 }
