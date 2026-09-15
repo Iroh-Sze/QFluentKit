@@ -311,7 +311,7 @@ void SearchLineEdit::initWidgets()
     m_hBoxLayout->addWidget(m_searchButton);
 
     connect(m_searchButton, &LineEditButton::clicked, this, &SearchLineEdit::search);
-    connect(m_searchButton, &LineEditButton::clicked, this, &SearchLineEdit::onClearButtonClicked);
+    connect(clearButton(), &LineEditButton::clicked, this, &SearchLineEdit::onClearButtonClicked);
 }
 
 void SearchLineEdit::search()
