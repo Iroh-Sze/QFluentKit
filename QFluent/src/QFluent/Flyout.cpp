@@ -420,6 +420,9 @@ void Flyout::exec(const QPoint& pos, FlyoutAnimationType aniType)
     }
 
     m_aniManager = FlyoutAnimationManager::make(aniType, this);
+    // 动画只更新位置和透明度，不会把仍处于隐藏状态的 Popup 显示出来。
+    // PyQt 版 Flyout.exec 以及 RoundMenu / CalendarView / PickerPanel 都会在这里 show()。
+    show();
     if (m_aniManager) {
         m_aniManager->exec(pos);
     }
