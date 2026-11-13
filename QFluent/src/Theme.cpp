@@ -28,6 +28,12 @@ Theme::Theme(QObject* parent) : QObject(parent)
         Qt::ColorScheme currentScheme = styleHints->colorScheme();
         d->m_sysIsDarkMode = (currentScheme == Qt::ColorScheme::Dark);
 
+        // m_autoTheme defaults to true. isDark() then returns m_sysIsDarkMode,
+        // while themeMode() returns m_currentTheme. Without this sync, a dark
+        // system starts with light QSS and dark hand-painted colors.
+        d->m_currentTheme = d->m_sysIsDarkMode ? Fluent::ThemeMode::DARK
+                                               : Fluent::ThemeMode::LIGHT;
+
         QPointer<Theme> self = this;
         connect(styleHints, &QStyleHints::colorSchemeChanged, this, [d, self](Qt::ColorScheme scheme) {
             if (!self) {
